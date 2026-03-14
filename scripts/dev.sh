@@ -22,7 +22,7 @@ cd ..
 
 echo "Starting Frontend..."
 cd frontend
-npm run dev -- --host &
+npm run dev &
 cd ..
 
 echo "Development environment is running."
