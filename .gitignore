@@ -7,4 +7,8 @@
 **/.env.*
 
 # Ignore common env variants
-*.env
+*.envnode_modules/
+target/
+.next/
+out/
+
