@@ -17,7 +17,7 @@ export default function Editor() {
 
     // Basic Yjs document and awareness
     const ydoc = new Y.Doc();
-    const provider = new WebrtcProvider("texable-demo-room", ydoc);
+    const provider = new WebrtcProvider("glyph-demo-room", ydoc);
     providerRef.current = provider;
     
     const ytext = ydoc.getText("codemirror");

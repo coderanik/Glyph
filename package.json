@@ -1,8 +1,8 @@
 {
-  "name": "texable-monorepo",
+  "name": "glyph-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "TeXable Workspace - A cross-platform collaborative LaTeX editor",
+  "description": "Glyph Workspace - A cross-platform collaborative LaTeX editor",
   "workspaces": [
     "frontend",
     "desktop"

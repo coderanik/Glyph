@@ -15,7 +15,7 @@ export default function Sidebar() {
         <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center">
           <span className="text-white">T</span>
         </div>
-        TeXable
+        Glyph
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">

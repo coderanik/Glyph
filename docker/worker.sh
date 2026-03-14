@@ -2,7 +2,7 @@
 set -e
 
 # basic compilation script
-echo "Starting TeXable Compilation Worker..."
+echo "Starting Glyph Compilation Worker..."
 
 # Arguments to potentially get S3 path or compile local
 FILE_NAME=${1:-main.tex}

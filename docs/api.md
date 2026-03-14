@@ -1,7 +1,7 @@
-# TeXable API Contracts
+# Glyph API Contracts
 
 ## Overview
-TeXable uses a RESTful API for standard CRUD operations and authentication, supplemented by WebSocket connections (via Yjs `y-webrtc` or a custom `y-websocket` Axum backend) for real-time collaborative editing.
+Glyph uses a RESTful API for standard CRUD operations and authentication, supplemented by WebSocket connections (via Yjs `y-webrtc` or a custom `y-websocket` Axum backend) for real-time collaborative editing.
 
 ## Endpoints
 
@@ -42,7 +42,7 @@ TeXable uses a RESTful API for standard CRUD operations and authentication, supp
 - `GET /api/projects/:id/compile/:job_id/download` -> Download resulting PDF
 
 ## WebSocket / Real-Time Editing
-WebSocket path: `wss://api.texable.com/ws/:project_id`
+WebSocket path: `wss://api.glyph.com/ws/:project_id`
 - Managed via `y-websocket` (Rust port using `yrs` and Axum WebSockets).
 - Handles cursor broadcasting and document state synchronizations.
 

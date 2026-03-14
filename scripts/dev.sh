@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting TeXable Development Environment..."
+echo "Starting Glyph Development Environment..."
 
 # Function to wrap up background jobs
 cleanup() {

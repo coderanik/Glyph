@@ -1,4 +1,4 @@
-# TeXable
+# Glyph
 
 A lightweight, collaborative LaTeX editor built with Rust, Next.js, and Tauri.
 

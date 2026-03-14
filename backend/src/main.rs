@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
     // even without Docker strictly running yet.
     
     let app = Router::new()
-        .route("/", get(|| async { "Hello, TeXable!" }));
+        .route("/", get(|| async { "Hello, Glyph!" }));
         // .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

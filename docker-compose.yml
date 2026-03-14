@@ -4,9 +4,9 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: texable
-      POSTGRES_PASSWORD: texable_password
-      POSTGRES_DB: texable
+      POSTGRES_USER: glyph
+      POSTGRES_PASSWORD: glyph_password
+      POSTGRES_DB: glyph
     ports:
       - "5432:5432"
     volumes:
