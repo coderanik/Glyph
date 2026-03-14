@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import Sidebar from '@/components/Sidebar';
 
 const Editor = dynamic(() => import('@/components/Editor'), {
   ssr: false,
@@ -8,27 +9,34 @@ const Editor = dynamic(() => import('@/components/Editor'), {
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <header className="w-full bg-indigo-600 shadow-md p-4 text-white">
-        <h1 className="text-2xl font-bold">TeXable Collaborative Editor</h1>
-      </header>
+    <div className="flex bg-gray-50 dark:bg-black h-screen overflow-hidden">
+      <Sidebar />
       
-      <div className="flex flex-1 w-full max-w-6xl p-6 gap-6">
-        <section className="flex-1 bg-white shadow-sm p-4 rounded-xl border border-gray-200">
-          <h2 className="text-lg font-semibold mb-2">LaTeX Source</h2>
-          <div className="h-[600px] border border-gray-300 rounded-lg overflow-hidden relative">
-            <Editor />
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-950">
+        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 shrink-0">
+          <div className="flex items-center gap-4">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
+              Current Project: <span className="text-indigo-600 dark:text-indigo-400">Thesis Main</span>
+            </h2>
           </div>
-        </section>
-
-        <aside className="w-80 bg-white p-4 shadow-sm rounded-xl border border-gray-200 hidden md:block">
-          <h2 className="text-lg font-semibold mb-2">Output Info</h2>
-          <p className="text-sm text-gray-500 mb-4">When compiling, the PDF output status will appear here.</p>
-          <button className="w-full bg-green-500 text-white font-medium py-2 rounded-lg hover:bg-green-600 transition-colors">
-            Compile PDF (Disabled)
-          </button>
-        </aside>
-      </div>
-    </main>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm">
+              Compile PDF
+            </button>
+            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500">
+              AD
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 p-6 overflow-hidden">
+          <div className="h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+            <div className="flex-1 relative">
+              <Editor />
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
