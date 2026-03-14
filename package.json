@@ -1,0 +1,17 @@
+{
+  "name": "texable-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TeXable Workspace - A cross-platform collaborative LaTeX editor",
+  "workspaces": [
+    "frontend",
+    "desktop"
+  ],
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "tauri:dev": "cd desktop && npm run tauri dev",
+    "backend:dev": "cd backend && cargo run",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  }
+}
