@@ -1,4 +1,5 @@
 mod state;
+mod models;
 
 use axum::{
     routing::get,
