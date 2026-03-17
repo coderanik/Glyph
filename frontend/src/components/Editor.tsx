@@ -5,19 +5,23 @@ import { EditorView, basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
-import { WebrtcProvider } from "y-webrtc";
+import { WebsocketProvider } from "y-websocket";
 
 export default function Editor() {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const providerRef = useRef<WebrtcProvider | null>(null);
+  const providerRef = useRef<WebsocketProvider | null>(null);
 
   useEffect(() => {
     if (!editorRef.current) return;
 
     // Basic Yjs document and awareness
     const ydoc = new Y.Doc();
-    const provider = new WebrtcProvider("glyph-demo-room", ydoc);
+    
+    // Connect to backend WebSocket for synchronization
+    // Using a placeholder project ID for now (demo-project)
+    const backendUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3000/ws/demo-project";
+    const provider = new WebsocketProvider(backendUrl, "", ydoc);
     providerRef.current = provider;
     
     const ytext = ydoc.getText("codemirror");

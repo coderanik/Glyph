@@ -11,6 +11,10 @@
     "dev": "cd frontend && npm run dev",
     "tauri:dev": "cd desktop && npm run tauri dev",
     "backend:dev": "cd backend && cargo run",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "cd frontend && npx tsc --noEmit",
+    "test": "cargo test --manifest-path backend/Cargo.toml && npm test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   }
