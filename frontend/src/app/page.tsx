@@ -10,42 +10,40 @@ const Editor = dynamic(() => import('@/components/Editor'), {
 
 export default function Home() {
   return (
-    <div className="flex bg-gray-50 dark:bg-black h-screen overflow-hidden">
+    <div className="flex bg-white dark:bg-zinc-950 h-screen overflow-hidden text-zinc-900 dark:text-zinc-100">
       <Sidebar />
       
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-950">
-        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-4">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
-              Current Project: <span className="text-indigo-600 dark:text-indigo-400">Thesis Main</span>
+      <main className="flex-1 flex flex-col min-w-0">
+        <header className="h-12 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 shrink-0 transition-colors">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-medium tracking-tight">
+              Thesis Main
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm">
-              Compile PDF
+            <button className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors shadow-sm">
+              Compile
             </button>
-            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500">
+            <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
               AD
             </div>
           </div>
         </header>
         
-        <div className="flex-1 p-6 overflow-hidden flex flex-col">
-          <div className="flex-1 h-full flex flex-col lg:flex-row gap-6">
-            
-            {/* Editor Pane */}
-            <div className="w-full lg:w-1/2 h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
-              <div className="flex-1 relative">
-                <Editor />
-              </div>
+        <div className="flex-1 overflow-hidden flex flex-row">
+          
+          {/* Editor Pane */}
+          <div className="w-1/2 h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
+            <div className="flex-1 relative">
+              <Editor />
             </div>
-            
-            {/* Renderer Pane */}
-            <div className="w-full lg:w-1/2 h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col relative">
-              <PdfViewer />
-            </div>
-            
           </div>
+          
+          {/* Renderer Pane */}
+          <div className="w-1/2 h-full bg-zinc-50 dark:bg-[#1A1A1A] flex flex-col relative">
+            <PdfViewer />
+          </div>
+          
         </div>
       </main>
     </div>
