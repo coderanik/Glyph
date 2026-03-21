@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Sidebar from '@/components/Sidebar';
 import PdfViewer from '@/components/PdfViewer';
+import UserDropdown from '@/components/UserDropdown';
 
 const Editor = dynamic(() => import('@/components/Editor'), {
   ssr: false,
@@ -24,9 +25,7 @@ export default function Home() {
             <button className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors shadow-sm">
               Compile
             </button>
-            <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
-              AD
-            </div>
+            <UserDropdown />
           </div>
         </header>
         
