@@ -16,6 +16,85 @@ use crate::models::{Claims, User};
 use crate::state::AppState;
 use uuid::Uuid;
 use chrono::{Utc, Duration};
+use bcrypt::{hash, verify, DEFAULT_COST};
+
+#[derive(Deserialize)]
+pub struct RegisterRequest {
+    pub email: String,
+    pub password: String,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub email: String,
+    pub password: String,
+}
+
+pub async fn register(
+    State(state): State<AppState>,
+    Json(payload): Json<RegisterRequest>,
+) -> impl IntoResponse {
+    let hashed_password = match hash(&payload.password, DEFAULT_COST) {
+        Ok(h) => h,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to hash password").into_response(),
+    };
+
+    let user = sqlx::query_as::<_, User>(
+        "INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) RETURNING *"
+    )
+    .bind(&payload.email)
+    .bind(&payload.name)
+    .bind(&hashed_password)
+    .fetch_one(&state.db)
+    .await;
+
+    match user {
+        Ok(user) => {
+            let token = generate_jwt(user.id).unwrap();
+            let response = serde_json::json!({
+                "token": token,
+                "user": user,
+            });
+            (StatusCode::CREATED, Json(response)).into_response()
+        }
+        Err(_) => (StatusCode::CONFLICT, "User already exists").into_response(),
+    }
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<LoginRequest>,
+) -> impl IntoResponse {
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, email, name, password_hash, oauth_provider, oauth_id, created_at, updated_at FROM users WHERE email = $1"
+    )
+    .bind(&payload.email)
+    .fetch_optional(&state.db)
+    .await;
+
+    match user {
+        Ok(Some(user)) => {
+            if let Some(password_hash) = &user.password_hash {
+                if verify(&payload.password, password_hash).unwrap_or(false) {
+                    let token = generate_jwt(user.id).unwrap();
+                    let response = serde_json::json!({
+                        "token": token,
+                        "user": user,
+                    });
+                    return Json(response).into_response();
+                }
+            }
+            (StatusCode::UNAUTHORIZED, "Invalid credentials").into_response()
+        }
+        Ok(None) => (StatusCode::UNAUTHORIZED, "Invalid credentials").into_response(),
+        Err(e) => {
+            tracing::error!("Login DB error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+        }
+    }
+}
+
 
 pub async fn google_auth(State(state): State<AppState>) -> impl IntoResponse {
     let (auth_url, _csrf_token) = state
@@ -189,7 +268,7 @@ where
 {
     type Rejection = (StatusCode, Json<serde_json::Value>);
 
-    async fn from_request_parts(parts: &Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let auth_header = parts
             .headers
             .get("Authorization")

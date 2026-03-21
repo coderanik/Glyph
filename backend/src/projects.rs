@@ -112,17 +112,21 @@ pub async fn get_project_files(
 
 pub async fn update_file_content(
     claims: AuthClaims,
-    Path((_project_id, file_id)): Path<(Uuid, Uuid)>,
+    Path((project_id, file_id)): Path<(Uuid, Uuid)>,
     State(state): State<AppState>,
     Json(content): Json<String>,
 ) -> impl IntoResponse {
-    // In a real app, we'd verify project_id matches and user has permission
-    // For now, simple update
+    let has_permission = check_project_permission(&state, project_id, claims.sub).await;
+    if !has_permission {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
+    }
+
     let result = sqlx::query(
-        "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+        "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND project_id = $3"
     )
     .bind(content.into_bytes())
     .bind(file_id)
+    .bind(project_id)
     .execute(&state.db)
     .await;
 
@@ -132,11 +136,13 @@ pub async fn update_file_content(
     }
 }
 
-async fn check_project_permission(state: &AppState, project_id: Uuid, user_id: Uuid) -> bool {
+pub async fn check_project_permission(state: &AppState, project_id: Uuid, user_id: Uuid) -> bool {
     let row: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM projects WHERE id = $1 AND (owner_id = $2 OR is_public = true)
-         UNION ALL
-         SELECT COUNT(*) FROM collaborators WHERE project_id = $1 AND user_id = $2"
+        "SELECT COALESCE(SUM(c), 0) FROM (
+            SELECT 1 as c FROM projects WHERE id = $1 AND (owner_id = $2 OR is_public = true)
+            UNION ALL
+            SELECT 1 as c FROM collaborators WHERE project_id = $1 AND user_id = $2
+         ) subq"
     )
     .bind(project_id)
     .bind(user_id)

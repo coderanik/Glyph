@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Sidebar from '@/components/Sidebar';
+import PdfViewer from '@/components/PdfViewer';
 
 const Editor = dynamic(() => import('@/components/Editor'), {
   ssr: false,
@@ -29,11 +30,21 @@ export default function Home() {
           </div>
         </header>
         
-        <div className="flex-1 p-6 overflow-hidden">
-          <div className="h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
-            <div className="flex-1 relative">
-              <Editor />
+        <div className="flex-1 p-6 overflow-hidden flex flex-col">
+          <div className="flex-1 h-full flex flex-col lg:flex-row gap-6">
+            
+            {/* Editor Pane */}
+            <div className="w-full lg:w-1/2 h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+              <div className="flex-1 relative">
+                <Editor />
+              </div>
             </div>
+            
+            {/* Renderer Pane */}
+            <div className="w-full lg:w-1/2 h-full bg-white dark:bg-gray-900 shadow-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col relative">
+              <PdfViewer />
+            </div>
+            
           </div>
         </div>
       </main>

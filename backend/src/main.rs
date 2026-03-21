@@ -14,7 +14,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::state::AppState;
-use crate::auth::{google_auth, google_callback, github_auth, github_callback, get_me};
+use crate::auth::{google_auth, google_callback, github_auth, github_callback, get_me, register, login};
 use crate::projects::{create_project, list_projects, create_file, get_project_files, update_file_content};
 use crate::compiler::{compile_project, get_job_status};
 use dotenvy::dotenv;
@@ -57,6 +57,8 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(|| async { "Hello, Glyph!" }))
         // Auth
+        .route("/auth/register", post(register))
+        .route("/auth/login", post(login))
         .route("/auth/google", get(google_auth))
         .route("/auth/google/callback", get(google_callback))
         .route("/auth/github", get(github_auth))

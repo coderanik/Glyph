@@ -12,12 +12,18 @@ use crate::state::AppState;
 use uuid::Uuid;
 use std::collections::HashMap;
 use chrono::Utc;
+use crate::projects::check_project_permission;
 
 pub async fn compile_project(
     claims: AuthClaims,
     Path(project_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let has_permission = check_project_permission(&state, project_id, claims.sub).await;
+    if !has_permission {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
+    }
+
     // 1. Create a job entry in DB
     let job_id = match sqlx::query!(
         "INSERT INTO compilation_jobs (project_id, status) VALUES ($1, 'queued') RETURNING id",
@@ -133,10 +139,14 @@ async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> any
 }
 
 pub async fn get_job_status(
-    _claims: AuthClaims,
-    Path((_project_id, job_id)): Path<(Uuid, Uuid)>,
+    claims: AuthClaims,
+    Path((project_id, job_id)): Path<(Uuid, Uuid)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let has_permission = check_project_permission(&state, project_id, claims.sub).await;
+    if !has_permission {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
+    }
     let job = sqlx::query!(
         "SELECT status, logs, pdf_url, started_at, completed_at FROM compilation_jobs WHERE id = $1",
         job_id
