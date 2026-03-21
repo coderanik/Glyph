@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Sidebar from '@/components/Sidebar';
 import PdfViewer from '@/components/PdfViewer';
@@ -10,6 +11,24 @@ const Editor = dynamic(() => import('@/components/Editor'), {
 });
 
 export default function Home() {
+  const [isCompiling, setIsCompiling] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const runCompile = useCallback(() => {
+    setIsCompiling(true);
+    // Simulate compilation time
+    setTimeout(() => {
+      setIsCompiling(false);
+    }, 1500);
+  }, []);
+
+  const handleEditorChange = useCallback(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      runCompile();
+    }, 1000); // Wait 1s after user stops typing to trigger compile
+  }, [runCompile]);
+
   return (
     <div className="flex bg-white dark:bg-zinc-950 h-screen overflow-hidden text-zinc-900 dark:text-zinc-100">
       <Sidebar />
@@ -22,7 +41,11 @@ export default function Home() {
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors shadow-sm">
+            <button 
+              onClick={runCompile}
+              className={`px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors shadow-sm ${isCompiling ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isCompiling}
+            >
               Compile
             </button>
             <UserDropdown />
@@ -34,13 +57,13 @@ export default function Home() {
           {/* Editor Pane */}
           <div className="w-1/2 h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
             <div className="flex-1 relative">
-              <Editor />
+              <Editor onChange={handleEditorChange} />
             </div>
           </div>
           
           {/* Renderer Pane */}
           <div className="w-1/2 h-full bg-zinc-50 dark:bg-[#1A1A1A] flex flex-col relative">
-            <PdfViewer />
+            <PdfViewer isCompiling={isCompiling} />
           </div>
           
         </div>

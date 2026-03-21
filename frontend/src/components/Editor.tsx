@@ -7,10 +7,15 @@ import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
 import { WebsocketProvider } from "y-websocket";
 
-export default function Editor() {
+export default function Editor({ onChange }: { onChange?: () => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!editorRef.current) return;
@@ -31,7 +36,12 @@ export default function Editor() {
       doc: ytext.toString(),
       extensions: [
         basicSetup,
-        yCollab(ytext, provider.awareness)
+        yCollab(ytext, provider.awareness),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged && onChangeRef.current) {
+            onChangeRef.current();
+          }
+        })
       ]
     });
 
