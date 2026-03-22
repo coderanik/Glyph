@@ -4,15 +4,18 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use bollard::container::{Config, CreateContainerOptions, StartContainerOptions, LogOutput, LogsOptions, WaitContainerOptions};
+use bollard::container::{
+    Config, CreateContainerOptions, LogOutput, LogsOptions, UploadToContainerOptions,
+    WaitContainerOptions,
+};
 use bollard::Docker;
+use bytes::Bytes;
 use futures_util::stream::StreamExt;
 use crate::models::Claims as AuthClaims;
 use crate::state::AppState;
 use uuid::Uuid;
-use std::collections::HashMap;
-use chrono::Utc;
 use crate::projects::check_project_permission;
+use sqlx::FromRow;
 
 pub async fn compile_project(
     claims: AuthClaims,
@@ -46,6 +49,51 @@ pub async fn compile_project(
     (StatusCode::ACCEPTED, Json(serde_json::json!({ "job_id": job_id }))).into_response()
 }
 
+#[derive(Debug, FromRow)]
+struct FileForCompile {
+    name: String,
+    path: String,
+    content: Option<Vec<u8>>,
+}
+
+fn rel_path_in_workspace(f: &FileForCompile) -> String {
+    let p = f.path.trim();
+    if !p.is_empty() {
+        p.trim_start_matches('/').replace('\\', "/")
+    } else {
+        f.name.clone()
+    }
+}
+
+fn main_tex_relative(files: &[FileForCompile]) -> Option<String> {
+    files.iter().find(|f| {
+        let rel = rel_path_in_workspace(f);
+        rel == "main.tex" || rel.ends_with("/main.tex") || f.name == "main.tex"
+    }).map(rel_path_in_workspace)
+}
+
+fn build_workspace_tar(files: &[FileForCompile]) -> anyhow::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    {
+        let mut ar = tar::Builder::new(&mut buf);
+        for f in files {
+            let rel = rel_path_in_workspace(f);
+            if rel.is_empty() {
+                continue;
+            }
+            let data = f.content.as_deref().unwrap_or(&[]);
+            let mut header = tar::Header::new_gnu();
+            header.set_path(&rel)?;
+            header.set_size(data.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            ar.append(&header, data)?;
+        }
+        ar.finish()?;
+    }
+    Ok(buf)
+}
+
 async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> anyhow::Result<()> {
     // Update status to running
     sqlx::query!(
@@ -56,32 +104,35 @@ async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> any
     .await?;
 
     let docker = Docker::connect_with_local_defaults()?;
-    
-    // Fetch project files
-    let files = sqlx::query!(
-        "SELECT name, content FROM files WHERE project_id = $1",
-        project_id
+
+    let files = sqlx::query_as::<_, FileForCompile>(
+        "SELECT name, path, content FROM files WHERE project_id = $1",
     )
+    .bind(project_id)
     .fetch_all(&state.db)
     .await?;
 
-    // For now, let's assume it's a LaTeX project and find the main file (e.g., main.tex)
-    // In a real app, we'd use a configuration file or detect the main file
-    let main_file = files.iter().find(|f| f.name == "main.tex")
-        .ok_or_else(|| anyhow::anyhow!("main.tex not found"))?;
+    let main_rel = main_tex_relative(&files)
+        .ok_or_else(|| anyhow::anyhow!("main.tex not found (expected path or name main.tex)"))?;
 
-    // Create a temporary "build" container
-    // Note: This is a simplified version. In production, we'd mount a volume or use tar streams to inject files.
-    let image = "blang/latex:latest"; // A common LaTeX image
-    
-    let mut env = Vec::new();
-    // We can't easily pass files via ENV, so we'll use a script to write them and run pdflatex
-    // This is just a conceptual implementation of how bollard works.
-    
-    let container_config = Config {
-        image: Some(image),
-        cmd: Some(vec!["pdflatex", "-interaction=nonstopmode", "main.tex"]),
-        working_dir: Some("/workspace"),
+    let tar_bytes = build_workspace_tar(&files)?;
+    if tar_bytes.is_empty() {
+        anyhow::bail!("no file contents to compile");
+    }
+
+    let image = "blang/latex:latest";
+
+    let cmd: Vec<String> = vec![
+        "pdflatex".into(),
+        "-interaction=nonstopmode".into(),
+        "-halt-on-error".into(),
+        main_rel,
+    ];
+
+    let container_config = Config::<String> {
+        image: Some(image.into()),
+        cmd: Some(cmd),
+        working_dir: Some("/workspace".into()),
         ..Default::default()
     };
 
@@ -91,10 +142,19 @@ async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> any
     });
 
     let container = docker.create_container(options, container_config).await?;
-    docker.start_container::<String>(&container.id, None).await?;
 
-    // TODO: Use `docker.upload_to_container` to send the files before starting.
-    // For this prototype, let's capture logs and mark as finished.
+    docker
+        .upload_to_container(
+            &container.id,
+            Some(UploadToContainerOptions {
+                path: "/workspace",
+                ..Default::default()
+            }),
+            Bytes::from(tar_bytes),
+        )
+        .await?;
+
+    docker.start_container::<String>(&container.id, None).await?;
 
     let mut logs = String::new();
     let mut log_stream = docker.logs(
