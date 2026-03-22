@@ -5,8 +5,8 @@
   "identifier": "com.tauri.dev",
   "build": {
     "frontendDist": "../frontend/out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm --prefix ../frontend run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm --prefix ../frontend run dev:tauri",
     "beforeBuildCommand": "npm --prefix ../frontend run build"
   },
   "app": {
