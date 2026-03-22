@@ -1,6 +1,7 @@
-/** Browser talks to Next on :3000; Rust API default is :4000 (see backend PORT). */
+/** Browser talks to Next; Rust API default is :4000 (see backend PORT). Use 127.0.0.1 to avoid IPv6 localhost quirks in WebViews. */
 const raw =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
+  "http://127.0.0.1:4000";
 
 export const API_BASE = raw;
 
