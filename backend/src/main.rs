@@ -5,12 +5,13 @@ mod projects;
 mod compiler;
 
 use axum::{
-    extract::{ws::{Message, WebSocket, WebSocketUpgrade}, Path, State},
+    extract::{ws::WebSocketUpgrade, Path, State},
     response::IntoResponse,
     routing::{get, post, put},
     Router,
 };
 use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::state::AppState;
@@ -18,9 +19,11 @@ use crate::auth::{google_auth, google_callback, github_auth, github_callback, ge
 use crate::projects::{create_project, list_projects, create_file, get_project_files, update_file_content};
 use crate::compiler::{compile_project, get_job_status};
 use dotenvy::dotenv;
-use yrs_axum::WssAwareness;
-use yrs::{Doc, Transact, Update};
-use y_sync::awareness::Awareness;
+use yrs::updates::decoder::Decode;
+use yrs_axum::ws::AxumConn;
+use yrs_axum::AwarenessRef;
+use yrs::sync::Awareness;
+use yrs::{Doc, ReadTxn, Transact, Update};
 use uuid::Uuid;
 use tokio::time::{sleep, Duration};
 
@@ -73,9 +76,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/projects/:project_id/jobs/:job_id", get(get_job_status))
         // Collaboration
         .route("/ws/:file_id", get(ws_handler))
+        .layer(CorsLayer::permissive())
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(4000);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::debug!("listening on {}", addr);
     
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -89,10 +97,9 @@ async fn ws_handler(
     Path(file_id): Path<Uuid>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let awareness = if let Some(a) = state.session_store.get(&file_id) {
+    let awareness: AwarenessRef = if let Some(a) = state.session_store.get(&file_id) {
         a.clone()
     } else {
-        // Try to load from DB
         let file = sqlx::query!("SELECT content FROM files WHERE id = $1", file_id)
             .fetch_optional(&state.db)
             .await
@@ -101,32 +108,38 @@ async fn ws_handler(
         let doc = Doc::new();
         if let Some(f) = file {
             if let Some(content) = f.content {
-                // Apply update to doc
                 if let Ok(update) = Update::decode_v1(&content) {
                     let mut txn = doc.transact_mut();
-                    txn.apply_update(update).unwrap();
+                    txn.apply_update(update);
                 }
             }
         }
-        
-        // Ensure "codemirror" text type exists
+
         let _text = doc.get_or_insert_text("codemirror");
-        let a = Arc::new(Awareness::new(doc));
+        let a: AwarenessRef = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
         state.session_store.insert(file_id, a.clone());
         a
     };
 
-    ws.on_upgrade(move |socket| WssAwareness::new(awareness).handle(socket))
+    ws.on_upgrade(move |socket| async move {
+        let conn = AxumConn::new(awareness, socket);
+        if let Err(e) = conn.await {
+            tracing::debug!("websocket session ended: {:?}", e);
+        }
+    })
 }
 
 async fn persist_sessions(state: &AppState) -> anyhow::Result<()> {
     for entry in state.session_store.iter() {
         let file_id = *entry.key();
         let awareness = entry.value();
-        let doc = awareness.doc();
-        
-        let update = doc.transact().encode_state_as_update_v1(&yrs::StateVector::default());
-        
+        let update = {
+            let guard = awareness.read().await;
+            let doc = guard.doc();
+            doc.transact()
+                .encode_state_as_update_v1(&yrs::StateVector::default())
+        };
+
         sqlx::query!(
             "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
             update,
