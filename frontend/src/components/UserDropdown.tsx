@@ -39,7 +39,10 @@ export default function UserDropdown() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg z-50 flex flex-col py-1 text-zinc-700 dark:text-zinc-300">
           <button 
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              router.push("/profile");
+            }}
             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800/50 w-full text-left transition-colors"
           >
             <User size={14} className="opacity-70" />
@@ -47,7 +50,10 @@ export default function UserDropdown() {
           </button>
           
           <button 
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              router.push("/settings");
+            }}
             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800/50 w-full text-left transition-colors"
           >
             <Settings size={14} className="opacity-70" />

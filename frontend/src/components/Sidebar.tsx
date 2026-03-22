@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Folder, Settings, Users, Plus } from "lucide-react";
+import { Folder, Users, Plus } from "lucide-react";
 
 const projects = [
   { id: 1, name: "Thesis Main", active: true },
@@ -56,11 +56,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="p-2 border-t border-zinc-200 dark:border-zinc-800/50">
-        <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 transition-all">
-          <Settings size={14} className="opacity-70" />
-          Settings
-        </button>
+      <div className="p-4 border-t border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
+        <span>Version</span>
+        <span className="text-zinc-400 dark:text-zinc-600">v0.1.0</span>
       </div>
     </aside>
   );
