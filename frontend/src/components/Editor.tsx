@@ -6,6 +6,7 @@ import { EditorState } from "@codemirror/state";
 import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
 import { WebsocketProvider } from "y-websocket";
+import { WS_BASE } from "@/lib/api";
 
 export default function Editor({ onChange }: { onChange?: () => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -23,10 +24,17 @@ export default function Editor({ onChange }: { onChange?: () => void }) {
     // Basic Yjs document and awareness
     const ydoc = new Y.Doc();
     
-    // Connect to backend WebSocket for synchronization
-    // Using a placeholder project ID for now (demo-project)
-    const backendUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3000/ws/demo-project";
-    const provider = new WebsocketProvider(backendUrl, "", ydoc);
+    // y-websocket URL = serverUrl + "/" + roomname (see y-websocket.js). Backend route is /ws/:file_id (UUID).
+    const serverUrl = (
+      process.env.NEXT_PUBLIC_WS_URL ?? WS_BASE
+    ).replace(/\/$/, "");
+    const demoFileId = "00000000-0000-0000-0000-000000000001";
+    const provider = new WebsocketProvider(
+      serverUrl,
+      `ws/${demoFileId}`,
+      ydoc,
+      { disableBc: true }
+    );
     providerRef.current = provider;
     
     const ytext = ydoc.getText("codemirror");
