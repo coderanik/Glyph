@@ -15,9 +15,9 @@ trap cleanup SIGINT SIGTERM
 echo "Starting Database & Redis..."
 docker compose up -d
 
-echo "Starting Backend..."
+echo "Starting Backend (API on port 4000)..."
 cd backend
-cargo run &
+PORT=4000 cargo run &
 cd ..
 
 echo "Starting Frontend..."
@@ -26,8 +26,8 @@ npm run dev &
 cd ..
 
 echo "Development environment is running."
-echo "- Frontend: http://localhost:5173"
-echo "- Backend: http://localhost:3000"
+echo "- Frontend: http://localhost:3000"
+echo "- Backend API: http://localhost:4000"
 echo "Press Ctrl+C to stop all services."
 
 wait
