@@ -21,4 +21,5 @@ WORKDIR /workspace
 COPY worker.sh /usr/local/bin/worker.sh
 RUN chmod +x /usr/local/bin/worker.sh
 
-ENTRYPOINT ["/usr/local/bin/worker.sh"]
+# No ENTRYPOINT: the backend runs one-shot `latexmk` via the Docker API (see compiler.rs).
+# To run the bundled worker script locally: docker run --entrypoint /usr/local/bin/worker.sh
