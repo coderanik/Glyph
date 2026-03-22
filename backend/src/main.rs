@@ -11,7 +11,9 @@ use axum::{
     Router,
 };
 use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
+use axum::http::request::Parts;
+use axum::http::HeaderValue;
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::state::AppState;
@@ -80,8 +82,21 @@ async fn main() -> anyhow::Result<()> {
         )
         // Collaboration
         .route("/ws/:file_id", get(ws_handler))
-        .layer(CorsLayer::permissive())
-        .with_state(state);
+        .with_state(state)
+        // Middleware must be applied *after* `with_state` so it wraps the full service (see axum middleware docs).
+        .layer(
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::predicate(
+                    |origin: &HeaderValue, _request: &Parts| {
+                        let o = origin.as_bytes();
+                        o.starts_with(b"http://localhost:")
+                            || o.starts_with(b"http://127.0.0.1:")
+                    },
+                ))
+                .allow_methods(Any)
+                .allow_headers(Any)
+                .expose_headers(Any),
+        );
 
     let port: u16 = std::env::var("PORT")
         .ok()
