@@ -21,6 +21,8 @@ export default function Editor({ onChange }: { onChange?: () => void }) {
   useEffect(() => {
     if (!editorRef.current) return;
 
+    let cancelled = false;
+
     // Basic Yjs document and awareness
     const ydoc = new Y.Doc();
     
@@ -29,11 +31,12 @@ export default function Editor({ onChange }: { onChange?: () => void }) {
       process.env.NEXT_PUBLIC_WS_URL ?? WS_BASE
     ).replace(/\/$/, "");
     const demoFileId = "00000000-0000-0000-0000-000000000001";
+    // connect:false + delayed connect: React Strict Mode runs mount/cleanup/mount; immediate connect is torn down before open.
     const provider = new WebsocketProvider(
       serverUrl,
       `ws/${demoFileId}`,
       ydoc,
-      { disableBc: true }
+      { connect: false, disableBc: true }
     );
     providerRef.current = provider;
     
@@ -61,7 +64,15 @@ export default function Editor({ onChange }: { onChange?: () => void }) {
     });
     viewRef.current = view;
 
+    const connectId = window.setTimeout(() => {
+      if (!cancelled) {
+        provider.connect();
+      }
+    }, 0);
+
     return () => {
+      cancelled = true;
+      window.clearTimeout(connectId);
       view.destroy();
       provider.destroy();
     };
