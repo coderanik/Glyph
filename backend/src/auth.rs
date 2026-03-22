@@ -1,5 +1,6 @@
+use std::future::Future;
+
 use axum::{
-    async_trait,
     extract::{FromRequestParts, Query, State},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Redirect},
@@ -261,46 +262,52 @@ pub fn generate_jwt(user_id: Uuid) -> anyhow::Result<String> {
     Ok(token)
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Claims
 where
     S: Send + Sync,
 {
     type Rejection = (StatusCode, Json<serde_json::Value>);
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let auth_header = parts
             .headers
             .get("Authorization")
             .and_then(|h| h.to_str().ok())
-            .ok_or((
+            .map(|s| s.to_string());
+
+        async move {
+            let auth_header = auth_header.ok_or((
                 StatusCode::UNAUTHORIZED,
                 Json(serde_json::json!({"error": "Missing authorization header"})),
             ))?;
 
-        if !auth_header.starts_with("Bearer ") {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "Invalid authorization header"})),
-            ));
-        }
+            if !auth_header.starts_with("Bearer ") {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(serde_json::json!({"error": "Invalid authorization header"})),
+                ));
+            }
 
-        let token = &auth_header[7..];
-        let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-        
-        let token_data = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(secret.as_ref()),
-            &Validation::default(),
-        )
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "Invalid token"})),
+            let token = &auth_header[7..];
+            let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
+            let token_data = decode::<Claims>(
+                token,
+                &DecodingKey::from_secret(secret.as_ref()),
+                &Validation::default(),
             )
-        })?;
+            .map_err(|_| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(serde_json::json!({"error": "Invalid token"})),
+                )
+            })?;
 
-        Ok(token_data.claims)
+            Ok(token_data.claims)
+        }
     }
 }
 
