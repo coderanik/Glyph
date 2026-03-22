@@ -14,7 +14,7 @@ export default function Sidebar() {
   return (
     <aside className="w-48 bg-zinc-900 dark:bg-[#111111] text-zinc-400 flex flex-col h-screen border-r border-zinc-200 dark:border-zinc-800/50 shrink-0">
       <div className="h-12 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center px-4 gap-2 text-white font-medium text-sm tracking-wide">
-        <Image src="/logo.svg" alt="Glyph Logo" width={20} height={20} className="rounded-[4px] shrink-0" />
+        <Image src="/logo.png" alt="Glyph Logo" width={20} height={20} className="rounded-[4px] shrink-0" />
         <span className="text-zinc-800 dark:text-zinc-100">Glyph</span>
       </div>
 
