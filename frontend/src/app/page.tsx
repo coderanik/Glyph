@@ -19,14 +19,14 @@ export default function Home() {
     // Simulate compilation time
     setTimeout(() => {
       setIsCompiling(false);
-    }, 1500);
+    }, 1200);
   }, []);
 
   const handleEditorChange = useCallback(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       runCompile();
-    }, 1000); // Wait 1s after user stops typing to trigger compile
+    }, 400); // Wait 400ms after user stops typing to trigger compile
   }, [runCompile]);
 
   return (

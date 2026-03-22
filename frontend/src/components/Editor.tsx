@@ -31,17 +31,19 @@ export default function Editor({ onChange }: { onChange?: () => void }) {
     
     const ytext = ydoc.getText("codemirror");
 
+    // Listen to changes deeply from the collaborative text instance directly
+    ytext.observe(() => {
+      if (onChangeRef.current) {
+        onChangeRef.current();
+      }
+    });
+
     // Basic Editor View Setup
     const state = EditorState.create({
       doc: ytext.toString(),
       extensions: [
         basicSetup,
-        yCollab(ytext, provider.awareness),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged && onChangeRef.current) {
-            onChangeRef.current();
-          }
-        })
+        yCollab(ytext, provider.awareness)
       ]
     });
 
