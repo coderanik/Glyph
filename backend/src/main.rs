@@ -17,13 +17,13 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::state::AppState;
 use crate::auth::{google_auth, google_callback, github_auth, github_callback, get_me, register, login};
 use crate::projects::{create_project, list_projects, create_file, get_project_files, update_file_content};
-use crate::compiler::{compile_project, get_job_status};
+use crate::compiler::{compile_project, get_job_pdf, get_job_status};
 use dotenvy::dotenv;
-use yrs::updates::decoder::Decode;
 use yrs_axum::ws::AxumConn;
 use yrs_axum::AwarenessRef;
 use yrs::sync::Awareness;
-use yrs::{Doc, ReadTxn, Transact, Update};
+use yrs::updates::decoder::Decode;
+use yrs::{Doc, Text, Transact, Update};
 use uuid::Uuid;
 use tokio::time::{sleep, Duration};
 
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         loop {
             sleep(Duration::from_secs(10)).await;
-            if let Err(e) = persist_sessions(&worker_state).await {
+            if let Err(e) = worker_state.persist_sessions().await {
                 tracing::error!("Persistence worker error: {}", e);
             }
         }
@@ -74,6 +74,10 @@ async fn main() -> anyhow::Result<()> {
         // Compilation
         .route("/projects/:project_id/compile", post(compile_project))
         .route("/projects/:project_id/jobs/:job_id", get(get_job_status))
+        .route(
+            "/projects/:project_id/jobs/:job_id/pdf",
+            get(get_job_pdf),
+        )
         // Collaboration
         .route("/ws/:file_id", get(ws_handler))
         .layer(CorsLayer::permissive())
@@ -111,6 +115,11 @@ async fn ws_handler(
                 if let Ok(update) = Update::decode_v1(&content) {
                     let mut txn = doc.transact_mut();
                     txn.apply_update(update);
+                } else if let Ok(s) = std::str::from_utf8(&content) {
+                    // Legacy/plaintext seed (e.g. first main.tex from API) — not Yjs-encoded
+                    let text = doc.get_or_insert_text("codemirror");
+                    let mut txn = doc.transact_mut();
+                    text.insert(&mut txn, 0, s);
                 }
             }
         }
@@ -129,24 +138,3 @@ async fn ws_handler(
     })
 }
 
-async fn persist_sessions(state: &AppState) -> anyhow::Result<()> {
-    for entry in state.session_store.iter() {
-        let file_id = *entry.key();
-        let awareness = entry.value();
-        let update = {
-            let guard = awareness.read().await;
-            let doc = guard.doc();
-            doc.transact()
-                .encode_state_as_update_v1(&yrs::StateVector::default())
-        };
-
-        sqlx::query!(
-            "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-            update,
-            file_id
-        )
-        .execute(&state.db)
-        .await?;
-    }
-    Ok(())
-}

@@ -5,6 +5,7 @@ use tokio::sync::broadcast;
 use oauth2::basic::BasicClient;
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use uuid::Uuid;
+use yrs::{ReadTxn, Transact};
 use yrs_axum::AwarenessRef;
 
 #[derive(Clone)]
@@ -66,6 +67,29 @@ impl AppState {
         .set_redirect_uri(github_redirect_url);
 
         Ok(Self { db, redis, session_store, channels, google_client, github_client })
+    }
+
+    /// Persist in-memory Yjs sessions to the database (files.content holds Yjs updates).
+    pub async fn persist_sessions(&self) -> anyhow::Result<()> {
+        for entry in self.session_store.iter() {
+            let file_id = *entry.key();
+            let awareness = entry.value();
+            let update = {
+                let guard = awareness.read().await;
+                let doc = guard.doc();
+                let txn = doc.transact();
+                txn.encode_state_as_update_v1(&yrs::StateVector::default())
+            };
+
+            sqlx::query!(
+                "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+                update,
+                file_id
+            )
+            .execute(&self.db)
+            .await?;
+        }
+        Ok(())
     }
 
     pub fn get_broadcast_channel(&self, project_id: &str) -> broadcast::Sender<Vec<u8>> {
