@@ -1,18 +1,17 @@
 use sqlx::postgres::PgPool;
 use redis::Client as RedisClient;
-use std::sync::Arc;
 use dashmap::DashMap;
 use tokio::sync::broadcast;
-use yrs::Doc;
-use y_sync::awareness::Awareness;
 use oauth2::basic::BasicClient;
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
+use uuid::Uuid;
+use yrs_axum::AwarenessRef;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
     pub redis: RedisClient,
-    pub session_store: DashMap<Uuid, Arc<Awareness>>,
+    pub session_store: DashMap<Uuid, AwarenessRef>,
     pub channels: DashMap<String, broadcast::Sender<Vec<u8>>>,
     pub google_client: BasicClient,
     pub github_client: BasicClient,
