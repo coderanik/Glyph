@@ -120,17 +120,22 @@ async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> any
         anyhow::bail!("no file contents to compile");
     }
 
-    let image = "blang/latex:latest";
+    // Full TeX Live (all CTAN packages) — see https://hub.docker.com/r/texlive/texlive
+    // Override with GLYPH_LATEX_IMAGE e.g. glyph-latex:latest after `docker build -t glyph-latex:latest docker/`
+    let latex_image = std::env::var("GLYPH_LATEX_IMAGE")
+        .unwrap_or_else(|_| "texlive/texlive:latest".into());
 
+    // latexmk handles bib/biber, cross-refs, and multi-pass runs; matches docker/worker.sh
     let cmd: Vec<String> = vec![
-        "pdflatex".into(),
+        "latexmk".into(),
+        "-pdf".into(),
         "-interaction=nonstopmode".into(),
         "-halt-on-error".into(),
         main_rel,
     ];
 
     let container_config = Config::<String> {
-        image: Some(image.into()),
+        image: Some(latex_image),
         cmd: Some(cmd),
         working_dir: Some("/workspace".into()),
         ..Default::default()
