@@ -1,13 +1,53 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Settings, User, LogOut } from "lucide-react";
+import { apiUrl } from "@/lib/api";
+
+function initialsFromName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase() || "?";
+}
 
 export default function UserDropdown() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [userLabel, setUserLabel] = useState("");
+
+  const refreshAuth = useCallback(() => {
+    const token = localStorage.getItem("glyph_token");
+    if (!token) {
+      setSignedIn(false);
+      setUserLabel("");
+      return;
+    }
+    setSignedIn(true);
+    fetch(apiUrl("/auth/me"), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u: { name?: string } | null) => {
+        if (u?.name) setUserLabel(initialsFromName(u.name));
+        else setUserLabel("?");
+      })
+      .catch(() => setUserLabel("?"));
+  }, []);
+
+  useEffect(() => {
+    refreshAuth();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "glyph_token") refreshAuth();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [refreshAuth]);
 
   // Close dropdown if clicking outside
   useEffect(() => {
@@ -24,16 +64,38 @@ export default function UserDropdown() {
 
   const handleLogout = () => {
     localStorage.removeItem("glyph_token");
+    setSignedIn(false);
+    setUserLabel("");
+    setIsOpen(false);
     router.push("/login");
   };
 
+  if (signedIn === false) {
+    return (
+      <Link
+        href="/login"
+        className="text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-1 rounded transition-colors"
+      >
+        Sign in
+      </Link>
+    );
+  }
+
+  if (signedIn === null) {
+    return (
+      <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" aria-hidden />
+    );
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 hover:ring-2 ring-zinc-300 dark:ring-zinc-700 transition-all focus:outline-none"
+        className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-300 hover:ring-2 ring-zinc-300 dark:ring-zinc-700 transition-all focus:outline-none"
+        title="Account"
       >
-        AD
+        {userLabel || "…"}
       </button>
 
       {isOpen && (
