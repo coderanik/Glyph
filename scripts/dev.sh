@@ -17,6 +17,8 @@ docker compose up -d
 
 echo "Starting Backend (API on port 4000)..."
 cd backend
+export DATABASE_URL="${DATABASE_URL:-postgresql://glyph:glyph_password@127.0.0.1:5433/glyph}"
+export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
 PORT=4000 cargo run &
 cd ..
 
