@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { apiUrl } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:3000/auth/login", {
+      const res = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -32,11 +33,11 @@ export default function LoginPage() {
   };
 
   const handleGoogle = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = apiUrl("/auth/google");
   };
 
   const handleGithub = () => {
-    window.location.href = "http://localhost:3000/auth/github";
+    window.location.href = apiUrl("/auth/github");
   };
 
   return (
