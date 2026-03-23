@@ -15,11 +15,11 @@ trap cleanup SIGINT SIGTERM
 echo "Starting Database & Redis..."
 docker compose up -d
 
-echo "Starting Backend (API on port 4000)..."
+echo "Starting Backend (API on port 4005)..."
 cd backend
 export DATABASE_URL="${DATABASE_URL:-postgresql://glyph:glyph_password@127.0.0.1:5433/glyph}"
 export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
-PORT=4000 cargo run &
+PORT=4005 cargo run &
 cd ..
 
 echo "Starting Frontend..."
@@ -29,7 +29,7 @@ cd ..
 
 echo "Development environment is running."
 echo "- Frontend: http://localhost:3000"
-echo "- Backend API: http://localhost:4000"
+echo "- Backend API: http://localhost:4005"
 echo "Press Ctrl+C to stop all services."
 
 wait
