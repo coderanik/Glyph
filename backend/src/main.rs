@@ -71,17 +71,23 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/me", get(get_me))
         // Projects
         .route("/projects", post(create_project).get(list_projects))
-        .route("/projects/:project_id/files", post(create_file).get(get_project_files))
-        .route("/projects/:project_id/files/:file_id", put(update_file_content))
-        // Compilation
-        .route("/projects/:project_id/compile", post(compile_project))
-        .route("/projects/:project_id/jobs/:job_id", get(get_job_status))
         .route(
-            "/projects/:project_id/jobs/:job_id/pdf",
+            "/projects/{project_id}/files",
+            post(create_file).get(get_project_files),
+        )
+        .route(
+            "/projects/{project_id}/files/{file_id}",
+            put(update_file_content),
+        )
+        // Compilation
+        .route("/projects/{project_id}/compile", post(compile_project))
+        .route("/projects/{project_id}/jobs/{job_id}", get(get_job_status))
+        .route(
+            "/projects/{project_id}/jobs/{job_id}/pdf",
             get(get_job_pdf),
         )
         // Collaboration
-        .route("/ws/:file_id", get(ws_handler))
+        .route("/ws/{file_id}", get(ws_handler))
         .with_state(state)
         // Middleware must be applied *after* `with_state` so it wraps the full service (see axum middleware docs).
         .layer(
