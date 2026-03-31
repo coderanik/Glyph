@@ -15,10 +15,18 @@ trap cleanup SIGINT SIGTERM
 echo "Starting Database & Redis..."
 docker compose up -d
 
+# Wait for the database to be ready
+echo "Waiting for database to be ready..."
+until docker exec glyph-db-1 pg_isready -h localhost -p 5432 -U glyph > /dev/null 2>&1; do
+  echo "Database is still starting..."
+  sleep 1
+done
+echo "Database is ready!"
+
 echo "Starting Backend (API on port 4005)..."
 cd backend
-export DATABASE_URL="${DATABASE_URL:-postgresql://glyph:glyph_password@127.0.0.1:5433/glyph}"
-export REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
+export DATABASE_URL="postgresql://glyph:glyph_password@127.0.0.1:5433/glyph"
+export REDIS_URL="redis://127.0.0.1:6379"
 PORT=4005 cargo run &
 cd ..
 

@@ -1,0 +1,128 @@
+name: 'Ollama Code Review'
+description: 'Automated code review using Ollama LLM'
+author: 'GitHub Actions'
+
+inputs:
+  llm-model:
+    description: 'LLM model to use for code review (e.g., codegemma, llama2, mistral)'
+    required: false
+    default: 'codegemma'
+  ollama-url:
+    description: 'Ollama API URL'
+    required: false
+    default: 'http://localhost:11434'
+  review-format:
+    description: 'Review output format (compact or detailed)'
+    required: false
+    default: 'compact'
+
+outputs:
+  review-status:
+    description: 'Status of the review (success, partial, failed)'
+  review-summary:
+    description: 'Summary of the code review findings'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Get PR diff
+      id: diff
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          git diff origin/${{ github.base_ref }} HEAD > pr.diff
+          echo "diff_file=pr.diff" >> $GITHUB_OUTPUT
+        else
+          echo "diff_file=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check Ollama availability
+      id: ollama
+      shell: bash
+      continue-on-error: true
+      run: |
+        if curl -s "${{ inputs.ollama-url }}/api/tags" > /dev/null 2>&1; then
+          echo "ollama_available=true" >> $GITHUB_OUTPUT
+          echo "✓ Ollama is running"
+        else
+          echo "ollama_available=false" >> $GITHUB_OUTPUT
+          echo "⚠ Ollama is not available at ${{ inputs.ollama-url }}"
+        fi
+
+    - name: Pull Ollama model
+      if: steps.ollama.outputs.ollama_available == 'true'
+      shell: bash
+      continue-on-error: true
+      run: |
+        echo "Pulling model: ${{ inputs.llm-model }}"
+        curl -X POST "${{ inputs.ollama-url }}/api/pull" \
+          -d "{\"name\":\"${{ inputs.llm-model }}\"}" \
+          -H "Content-Type: application/json"
+        echo "Model ready for review"
+
+    - name: Run code review
+      if: steps.ollama.outputs.ollama_available == 'true'
+      id: review
+      shell: bash
+      run: |
+        DIFF_FILE="${{ steps.diff.outputs.diff_file }}"
+        
+        if [ -z "$DIFF_FILE" ] || [ ! -f "$DIFF_FILE" ]; then
+          echo "review_status=no_changes" >> $GITHUB_OUTPUT
+          echo "No changes detected in diff"
+          exit 0
+        fi
+        
+        # Read the diff and prepare prompt
+        DIFF_CONTENT=$(cat "$DIFF_FILE" | head -4000)
+        
+        PROMPT="You are an expert code reviewer. Review the following code changes and provide constructive feedback. Be concise and focus on:\n1. Logic errors or potential bugs\n2. Performance issues\n3. Code quality improvements\n4. Security concerns\n\nCode diff:\n$DIFF_CONTENT\n\nProvide your review:"
+        
+        # Call Ollama API
+        REVIEW_RESPONSE=$(curl -s -X POST "${{ inputs.ollama-url }}/api/generate" \
+          -d "{\"model\":\"${{ inputs.llm-model }}\",\"prompt\":\"$PROMPT\",\"stream\":false,\"num_predict\":500}" \
+          -H "Content-Type: application/json")
+        
+        # Extract response
+        REVIEW=$(echo "$REVIEW_RESPONSE" | grep -o '"response":"[^"]*"' | head -1 | sed 's/"response":"//' | sed 's/"$//')
+        
+        if [ -z "$REVIEW" ]; then
+          echo "review_status=failed" >> $GITHUB_OUTPUT
+          echo "review_summary=Failed to generate review" >> $GITHUB_OUTPUT
+        else
+          echo "review_status=success" >> $GITHUB_OUTPUT
+          echo "review_summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Post review comment
+      if: steps.ollama.outputs.ollama_available == 'true' && steps.review.outputs.review_status == 'success'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const review = `${{ steps.review.outputs.review_summary }}`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🤖 Ollama Code Review\n\nModel: **${{ inputs.llm-model }}**\n\n${review}`
+          });
+
+    - name: Ollama unavailable notice
+      if: steps.ollama.outputs.ollama_available == 'false'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## ⚠️ Code Review Skipped\n\nOllama is not available at \`${{ inputs.ollama-url }}\`. Please ensure Ollama is running.\n\n**Setup Instructions:**\n1. Install Ollama from https://ollama.ai\n2. Start Ollama: \`ollama serve\`\n3. Pull the model: \`ollama pull ${{ inputs.llm-model }}\``
+          });

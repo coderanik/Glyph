@@ -1,5 +1,5 @@
 -- Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE users (
 );
 
 -- Projects Table
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -21,7 +21,7 @@ CREATE TABLE projects (
 );
 
 -- Files Table
-CREATE TABLE files (
+CREATE TABLE IF NOT EXISTS files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE files (
 );
 
 -- Collaborators Table
-CREATE TABLE collaborators (
+CREATE TABLE IF NOT EXISTS collaborators (
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL CHECK (role IN ('editor', 'viewer')),
@@ -42,7 +42,7 @@ CREATE TABLE collaborators (
 );
 
 -- Sessions Table (for active WebSocket/Yjs sessions)
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -51,7 +51,7 @@ CREATE TABLE sessions (
 );
 
 -- Compilation Jobs Table
-CREATE TABLE compilation_jobs (
+CREATE TABLE IF NOT EXISTS compilation_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     status VARCHAR(50) NOT NULL CHECK (status IN ('queued', 'running', 'success', 'failed')),

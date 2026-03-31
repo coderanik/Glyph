@@ -20,7 +20,55 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   height: 100vh;
   margin: 0;
+}
+
+/* Editor styles */
+.cm-editor {
+  height: 100% !important;
+  font-size: 13px !important;
+}
+
+.cm-scroller {
+  overflow: auto !important;
+}
+
+.cm-content {
+  padding: 8px 0 !important;
+}
+
+/* Scrollbar styling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for editor */
+.cm-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 4px;
+}
+
+.dark .cm-scroller::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+/* Smooth transitions */
+.sidebar-transition {
+  transition: width 200ms ease-in-out, opacity 200ms ease-in-out;
 }

@@ -1,0 +1,604 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+
+  .shell {
+    display: flex; flex-direction: column;
+    height: 580px; border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg); overflow: hidden;
+    background: var(--color-background-tertiary);
+  }
+
+  /* TITLEBAR */
+  .titlebar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 40px;
+    background: var(--color-background-primary);
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    flex-shrink: 0;
+  }
+  .titlebar-dots { display: flex; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .project-name {
+    font-size: 13px; font-weight: 500; color: var(--color-text-primary);
+    margin-left: 8px; flex: 1; text-align: center;
+  }
+  .project-name span { color: var(--color-text-secondary); font-weight: 400; }
+  .tb-actions { display: flex; align-items: center; gap: 6px; }
+  .tb-pill {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px;
+    border: 0.5px solid var(--color-border-secondary);
+    color: var(--color-text-secondary); cursor: pointer;
+    background: var(--color-background-secondary);
+    transition: background .15s;
+  }
+  .tb-pill:hover { background: var(--color-background-tertiary); }
+  .tb-pill.compile {
+    background: #1a7f4b; color: #d4f5e2; border-color: #1a7f4b;
+    font-weight: 500;
+  }
+  .tb-pill.compile:hover { background: #176640; }
+  .compile-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: inline-block; margin-right: 4px; }
+  .compile-dot.busy { background: #facc15; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .avatar-stack { display: flex; }
+  .av { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--color-background-primary); display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 500; color: #fff; margin-left: -6px; }
+  .av:first-child { margin-left: 0; }
+
+  /* MAIN BODY */
+  .body { display: flex; flex: 1; overflow: hidden; }
+
+  /* ACTIVITY BAR (far left, narrow icon strip) */
+  .activity-bar {
+    width: 44px; flex-shrink: 0;
+    background: var(--color-background-primary);
+    border-right: 0.5px solid var(--color-border-tertiary);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0; gap: 2px;
+  }
+  .ab-btn {
+    width: 32px; height: 32px; border-radius: var(--border-radius-md);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--color-text-tertiary);
+    transition: background .12s, color .12s;
+    border: none; background: transparent;
+  }
+  .ab-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .ab-btn.active { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .ab-btn svg { width: 16px; height: 16px; }
+  .ab-spacer { flex: 1; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--color-background-secondary);
+    border-right: 0.5px solid var(--color-border-tertiary);
+    display: flex; flex-direction: column;
+    overflow: hidden; transition: width .2s;
+  }
+  .sidebar.collapsed { width: 0; }
+  .sb-section { padding: 10px 0; }
+  .sb-label {
+    font-size: 10px; font-weight: 500; letter-spacing: .06em;
+    color: var(--color-text-tertiary); padding: 0 12px 6px;
+    text-transform: uppercase;
+  }
+  .sb-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 12px; cursor: pointer; font-size: 12px;
+    color: var(--color-text-secondary);
+    transition: background .1s;
+  }
+  .sb-item:hover { background: var(--color-background-primary); color: var(--color-text-primary); }
+  .sb-item.active { background: var(--color-background-primary); color: var(--color-text-primary); }
+  .sb-item svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--color-text-tertiary); }
+  .sb-item.active svg { color: var(--color-text-secondary); }
+  .sb-divider { height: 0.5px; background: var(--color-border-tertiary); margin: 4px 0; }
+  .sb-badge {
+    margin-left: auto; font-size: 10px; padding: 1px 5px;
+    border-radius: 20px; background: var(--color-background-info);
+    color: var(--color-text-info); font-weight: 500;
+  }
+  .file-indent { padding-left: 24px; }
+  .collab-av { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 600; color: #fff; }
+  .online-dot { width: 5px; height: 5px; border-radius: 50%; background: #4ade80; margin-left: auto; }
+
+  /* EDITOR AREA */
+  .editor-area {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    background: var(--color-background-primary);
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-secondary);
+    overflow-x: auto; flex-shrink: 0; height: 34px;
+  }
+  .tab {
+    display: flex; align-items: center; gap: 5px;
+    padding: 0 12px; height: 100%; font-size: 12px;
+    color: var(--color-text-secondary); cursor: pointer;
+    border-right: 0.5px solid var(--color-border-tertiary);
+    white-space: nowrap; transition: background .1s;
+    position: relative;
+  }
+  .tab:hover { background: var(--color-background-primary); color: var(--color-text-primary); }
+  .tab.active {
+    background: var(--color-background-primary); color: var(--color-text-primary);
+  }
+  .tab.active::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px; background: var(--color-text-info);
+  }
+  .tab svg { width: 12px; height: 12px; }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-warning); }
+
+  /* SPLIT PANE */
+  .split { display: flex; flex: 1; overflow: hidden; }
+  .pane-editor {
+    display: flex; flex-direction: column;
+    border-right: 0.5px solid var(--color-border-tertiary);
+    overflow: hidden;
+  }
+  .pane-preview { display: flex; flex-direction: column; overflow: hidden; }
+  .pane-header {
+    display: flex; align-items: center; gap: 6px; padding: 0 10px;
+    height: 28px; border-bottom: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-secondary); flex-shrink: 0;
+  }
+  .ph-label { font-size: 11px; color: var(--color-text-tertiary); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .ph-actions { margin-left: auto; display: flex; gap: 4px; }
+  .ph-btn {
+    width: 20px; height: 20px; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center;
+    color: var(--color-text-tertiary); cursor: pointer; border: none; background: transparent;
+    transition: background .1s, color .1s;
+  }
+  .ph-btn:hover { background: var(--color-background-primary); color: var(--color-text-primary); }
+  .ph-btn svg { width: 12px; height: 12px; }
+
+  /* CODE AREA */
+  .code-area {
+    flex: 1; overflow-y: auto; display: flex;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.7;
+    padding: 12px 0;
+  }
+  .line-numbers {
+    padding: 0 10px 0 16px; text-align: right;
+    color: var(--color-text-tertiary); user-select: none; flex-shrink: 0;
+    font-size: 11px;
+  }
+  .ln { display: block; }
+  .code-content { flex: 1; padding-right: 16px; color: var(--color-text-secondary); }
+  .kw { color: #7c9fcc; }
+  .kw2 { color: #c594c5; }
+  .arg { color: #99c794; }
+  .str { color: #e7c285; }
+  .cm { color: var(--color-text-tertiary); font-style: italic; }
+  .cursor-marker {
+    display: inline-block; width: 2px; height: 14px;
+    background: #7c9fcc; animation: blink 1.2s step-end infinite;
+    vertical-align: middle;
+  }
+  .collab-cursor { display: inline-block; width: 2px; height: 14px; background: #e07b7b; vertical-align: middle; position: relative; }
+  .collab-cursor::before { content: 'Priya'; position: absolute; top: -16px; left: 0; font-size: 9px; background: #e07b7b; color: #fff; padding: 1px 4px; border-radius: 3px; white-space: nowrap; font-family: var(--font-sans); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* PDF PREVIEW AREA */
+  .pdf-area {
+    flex: 1; overflow: hidden; position: relative;
+    background: #2a2a2e; display: flex; align-items: center; justify-content: center;
+  }
+  .pdf-page {
+    width: 68%; background: #fff; border-radius: 3px;
+    padding: 20px 22px; color: #222;
+    box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  }
+  .pdf-title { font-size: 12px; font-weight: 700; text-align: center; margin-bottom: 4px; color: #111; }
+  .pdf-authors { font-size: 9px; text-align: center; color: #555; margin-bottom: 10px; }
+  .pdf-abstract-label { font-size: 8px; font-weight: 700; text-align: center; margin-bottom: 4px; color: #333; }
+  .pdf-body { font-size: 7.5px; color: #333; line-height: 1.5; }
+  .pdf-section { font-size: 9px; font-weight: 700; margin: 8px 0 3px; color: #111; }
+  .pdf-overlay {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; align-items: center;
+    background: rgba(0,0,0,.6); border-radius: 20px; padding: 4px 10px;
+  }
+  .pdf-ol-btn {
+    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; color: rgba(255,255,255,.8);
+    transition: background .1s; border: none; background: transparent;
+  }
+  .pdf-ol-btn:hover { background: rgba(255,255,255,.12); }
+  .pdf-ol-btn svg { width: 12px; height: 12px; }
+  .pdf-pg { font-size: 11px; color: rgba(255,255,255,.7); padding: 0 4px; }
+
+  /* STATUS BAR */
+  .statusbar {
+    height: 24px; display: flex; align-items: center; gap: 0;
+    background: var(--color-background-primary);
+    border-top: 0.5px solid var(--color-border-tertiary);
+    flex-shrink: 0; padding: 0 8px;
+    font-size: 11px; color: var(--color-text-tertiary);
+  }
+  .sb-seg {
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 8px; height: 100%;
+    border-right: 0.5px solid var(--color-border-tertiary);
+    cursor: default;
+  }
+  .sb-seg:last-child { border-right: none; margin-left: auto; border-left: 0.5px solid var(--color-border-tertiary); }
+  .sb-seg svg { width: 11px; height: 11px; }
+  .status-ok { color: #4ade80; }
+  .status-warn { color: #facc15; }
+
+  /* TOOLTIP */
+  .annotation {
+    position: absolute; background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 6px 9px; font-size: 11px; color: var(--color-text-secondary);
+    max-width: 160px; z-index: 10; pointer-events: none; line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+
+  /* PANEL TABS (sidebar top) */
+  .sb-tabs {
+    display: flex; border-bottom: 0.5px solid var(--color-border-tertiary);
+    flex-shrink: 0;
+  }
+  .sb-tab {
+    flex: 1; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--color-text-tertiary); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .12s;
+  }
+  .sb-tab.active { color: var(--color-text-primary); border-bottom-color: var(--color-text-info); }
+
+  .resize-handle {
+    width: 4px; background: transparent; cursor: col-resize; flex-shrink: 0;
+    transition: background .15s;
+  }
+  .resize-handle:hover { background: var(--color-border-secondary); }
+</style>
+
+<div style="padding: 1rem 0;">
+
+<!-- SECTION LABEL -->
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+  <span style="font-size:12px;font-weight:500;color:var(--color-text-secondary)">Glyph — Redesign proposal</span>
+  <span style="font-size:11px;color:var(--color-text-tertiary)">·  interactive mockup</span>
+  <div style="margin-left:auto;display:flex;gap:6px;">
+    <button onclick="setSplit(60)" class="tb-pill" id="btn60">60/40</button>
+    <button onclick="setSplit(50)" class="tb-pill" id="btn50">50/50</button>
+    <button onclick="setSplit(40)" class="tb-pill" id="btn40">40/60</button>
+    <button onclick="toggleSidebar()" class="tb-pill" id="btnSb">Hide sidebar</button>
+  </div>
+</div>
+
+<div class="shell" id="shell">
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="titlebar-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+    <span class="project-name">thesis-draft <span>/ main.tex</span></span>
+    <div class="tb-actions">
+      <div class="avatar-stack">
+        <div class="av" style="background:#7c9fcc" title="You">AN</div>
+        <div class="av" style="background:#e07b7b" title="Priya">PR</div>
+        <div class="av" style="background:#7dbf7a" title="Keanu">KN</div>
+      </div>
+      <button class="tb-pill" id="compileBtn" onclick="triggerCompile()">
+        <span class="compile-dot" id="cdot"></span>Compile
+      </button>
+      <button class="tb-pill">Share</button>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- ACTIVITY BAR -->
+    <div class="activity-bar">
+      <button class="ab-btn active" id="ab0" onclick="setAB(0)" title="Explorer">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/><path d="M10 2v3h3"/></svg>
+      </button>
+      <button class="ab-btn" id="ab1" onclick="setAB(1)" title="Search">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10.5 10.5l2.5 2.5"/></svg>
+      </button>
+      <button class="ab-btn" id="ab2" onclick="setAB(2)" title="Collaborators">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><circle cx="6" cy="5" r="2.5"/><path d="M2 13c0-2.5 1.8-4 4-4s4 1.5 4 4"/><circle cx="12" cy="5" r="2"/><path d="M14 13c0-2-1.2-3.2-2-3.5"/></svg>
+      </button>
+      <button class="ab-btn" id="ab3" onclick="setAB(3)" title="History">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 2"/></svg>
+      </button>
+      <div class="ab-spacer"></div>
+      <button class="ab-btn" title="Settings">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 2v1m0 10v1M2 8h1m10 0h1m-2.1-3.9-.7.7M5.8 10.2l-.7.7m0-5.6.7.7m4.4 4.4.7.7"/></svg>
+      </button>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <div class="sb-tabs">
+        <div class="sb-tab active" id="sbt0" onclick="setSBTab(0)">Files</div>
+        <div class="sb-tab" id="sbt1" onclick="setSBTab(1)">Outline</div>
+      </div>
+      <!-- Files panel -->
+      <div id="sbp0" style="overflow-y:auto;flex:1;">
+        <div class="sb-section">
+          <div class="sb-label">Project</div>
+          <div class="sb-item active">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/><path d="M10 2v3h3"/></svg>
+            main.tex
+          </div>
+          <div class="sb-item file-indent">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/><path d="M10 2v3h3"/></svg>
+            references.bib
+          </div>
+          <div class="sb-item file-indent">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/><path d="M10 2v3h3"/></svg>
+            abstract.tex <span class="sb-badge">!</span>
+          </div>
+          <div class="sb-item file-indent" style="color:var(--color-text-tertiary)">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 4h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM5 4V3h6v1"/></svg>
+            figures/
+          </div>
+        </div>
+        <div class="sb-divider"></div>
+        <div class="sb-section">
+          <div class="sb-label">Collaborators</div>
+          <div class="sb-item">
+            <div class="collab-av" style="background:#7c9fcc">AN</div>
+            Anik (you)
+            <div class="online-dot"></div>
+          </div>
+          <div class="sb-item">
+            <div class="collab-av" style="background:#e07b7b">PR</div>
+            Priya
+            <div class="online-dot"></div>
+          </div>
+          <div class="sb-item">
+            <div class="collab-av" style="background:#7dbf7a">KN</div>
+            Keanu
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:auto">2h ago</span>
+          </div>
+        </div>
+      </div>
+      <!-- Outline panel (hidden by default) -->
+      <div id="sbp1" style="display:none;overflow-y:auto;flex:1;">
+        <div class="sb-section">
+          <div class="sb-label">Structure</div>
+          <div class="sb-item">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            1. Introduction
+          </div>
+          <div class="sb-item file-indent">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            1.1 Background
+          </div>
+          <div class="sb-item file-indent">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            1.2 Motivation
+          </div>
+          <div class="sb-item">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            2. Methodology
+          </div>
+          <div class="sb-item">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            3. Results
+          </div>
+          <div class="sb-item">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 4h8M4 8h6M4 12h4"/></svg>
+            4. Conclusion
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITOR + PREVIEW -->
+    <div class="editor-area">
+      <!-- TABS -->
+      <div class="tabs">
+        <div class="tab active">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/></svg>
+          main.tex
+          <div class="tab-dot"></div>
+        </div>
+        <div class="tab">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/></svg>
+          references.bib
+        </div>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;padding-right:8px;gap:4px;">
+          <button class="ph-btn" title="Split vertical" style="width:24px;height:24px;">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" opacity=".5"/><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- SPLIT PANE -->
+      <div class="split">
+        <!-- EDITOR PANE -->
+        <div class="pane-editor" id="editorPane" style="flex: 0 0 55%;">
+          <div class="pane-header">
+            <span class="ph-label">Editor</span>
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:8px">Ln 14, Col 22</span>
+            <div class="ph-actions">
+              <button class="ph-btn" title="Wrap lines">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 4h12M2 8h8a2 2 0 010 4H8m2-2-2 2 2 2"/></svg>
+              </button>
+              <button class="ph-btn" title="Focus mode">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 6V3h3M11 3h3v3M2 10v3h3M11 13h3v-3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="code-area">
+            <div class="line-numbers">
+              <span class="ln">1</span><span class="ln">2</span><span class="ln">3</span>
+              <span class="ln">4</span><span class="ln">5</span><span class="ln">6</span>
+              <span class="ln">7</span><span class="ln">8</span><span class="ln">9</span>
+              <span class="ln">10</span><span class="ln">11</span><span class="ln">12</span>
+              <span class="ln">13</span><span class="ln">14</span><span class="ln">15</span>
+              <span class="ln">16</span><span class="ln">17</span>
+            </div>
+            <div class="code-content">
+              <div><span class="kw">\documentclass</span><span style="color:var(--color-text-secondary)">[</span><span class="arg">12pt</span><span style="color:var(--color-text-secondary)">]{</span><span class="arg">article</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div><span class="kw">\usepackage</span><span style="color:var(--color-text-secondary)">{</span><span class="arg">amsmath, amssymb</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div><span class="kw">\usepackage</span><span style="color:var(--color-text-secondary)">{</span><span class="arg">hyperref</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div><span class="kw">\usepackage</span><span style="color:var(--color-text-secondary)">[</span><span class="arg">margin=1in</span><span style="color:var(--color-text-secondary)">]{</span><span class="arg">geometry</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div>&nbsp;</div>
+              <div><span class="kw2">\title</span><span style="color:var(--color-text-secondary)">{</span><span class="str">Attention Mechanisms in Transformer Architectures</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div><span class="kw2">\author</span><span style="color:var(--color-text-secondary)">{Anik N.}</span></div>
+              <div><span class="kw">\date</span><span style="color:var(--color-text-secondary)">{\today}</span></div>
+              <div>&nbsp;</div>
+              <div><span class="kw">\begin</span><span style="color:var(--color-text-secondary)">{</span><span class="arg">document</span><span style="color:var(--color-text-secondary)">}</span></div>
+              <div><span class="kw">\maketitle</span></div>
+              <div>&nbsp;</div>
+              <div><span class="cm">% Introduction section</span></div>
+              <div><span class="kw">\section</span><span style="color:var(--color-text-secondary)">{</span><span class="str">Introduction</span><span style="color:var(--color-text-secondary)">}</span><span class="cursor-marker"></span></div>
+              <div>This paper examines the role of self-attention</div>
+              <div>in sequence modelling tasks. <span class="collab-cursor"></span>Recent advances</div>
+              <div>have demonstrated that attention-based models...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESIZE HANDLE -->
+        <div class="resize-handle"></div>
+
+        <!-- PREVIEW PANE -->
+        <div class="pane-preview" style="flex:1;">
+          <div class="pane-header">
+            <span class="ph-label">Preview</span>
+            <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:8px" id="compileStatus">Compiled 0s ago</span>
+            <div class="ph-actions">
+              <button class="ph-btn" title="Sync scroll">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 2v4l2-2M4 6l-2-2M12 14v-4l-2 2m2-2 2 2"/><path d="M4 8h8"/></svg>
+              </button>
+              <button class="ph-btn" title="Download PDF">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M8 3v7m0 0-2.5-2.5M8 10l2.5-2.5"/><rect x="3" y="13" width="10" height="1" rx=".5"/></svg>
+              </button>
+              <button class="ph-btn" title="Full preview">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 6V3h3M11 3h3v3M2 10v3h3M11 13h3v-3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="pdf-area">
+            <div class="pdf-page">
+              <div class="pdf-title">Attention Mechanisms in Transformer Architectures</div>
+              <div class="pdf-authors">Anik N. · SRMIST · March 2026</div>
+              <div class="pdf-abstract-label">Abstract</div>
+              <div class="pdf-body" style="margin-bottom:6px">This paper examines the role of self-attention in sequence modelling tasks. Recent advances have demonstrated that attention-based models significantly outperform recurrent architectures on long-range dependencies.</div>
+              <div class="pdf-section">1. Introduction</div>
+              <div class="pdf-body">The transformer architecture, introduced by Vaswani et al. (2017), fundamentally changed the landscape of natural language processing. Central to this architecture is the self-attention mechanism, which allows the model to weigh the relevance of different tokens...</div>
+              <div class="pdf-section">2. Background</div>
+              <div class="pdf-body">Prior work on sequence models relied heavily on recurrent neural networks (RNNs) and their variants, including long short-term memory (LSTM) networks. While effective, these models suffer from difficulty capturing long-range dependencies...</div>
+            </div>
+            <div class="pdf-overlay">
+              <button class="pdf-ol-btn">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 8h8"/></svg>
+              </button>
+              <span class="pdf-pg">100%</span>
+              <button class="pdf-ol-btn">
+                <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M4 8h8M8 4l4 4-4 4"/></svg>
+              </button>
+              <div style="width:0.5px;height:14px;background:rgba(255,255,255,.2)"></div>
+              <span class="pdf-pg">1 / 8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div class="statusbar">
+        <div class="sb-seg">
+          <svg class="status-ok" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>
+          <span>Connected · 2 online</span>
+        </div>
+        <div class="sb-seg">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M8 3v5l3 3"/><circle cx="8" cy="8" r="5.5"/></svg>
+          <span>Auto-save on</span>
+        </div>
+        <div class="sb-seg">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+          <span>4,812 words</span>
+        </div>
+        <div class="sb-seg">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z"/></svg>
+          <span>LaTeX · UTF-8</span>
+        </div>
+        <div class="sb-seg">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 16 16"><path d="M2 12l3-3 3 3 6-6"/></svg>
+          <span id="compileStatusBar" class="status-ok">Compiled · 0 errors</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let sidebarOpen = true;
+let currentAB = 0;
+let currentSBTab = 0;
+let compiling = false;
+
+function setSplit(editorPct) {
+  document.getElementById('editorPane').style.flex = `0 0 ${editorPct}%`;
+  ['btn60','btn50','btn40'].forEach(id => document.getElementById(id).style.background = '');
+  const map = {60:'btn60',50:'btn50',40:'btn40'};
+  if (map[editorPct]) document.getElementById(map[editorPct]).style.background = 'var(--color-background-tertiary)';
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
+  document.getElementById('btnSb').textContent = sidebarOpen ? 'Hide sidebar' : 'Show sidebar';
+}
+
+function setAB(i) {
+  ['ab0','ab1','ab2','ab3'].forEach((id,j) => document.getElementById(id).classList.toggle('active', j===i));
+  currentAB = i;
+  if (!sidebarOpen) toggleSidebar();
+}
+
+function setSBTab(i) {
+  ['sbt0','sbt1'].forEach((id,j) => document.getElementById(id).classList.toggle('active', j===i));
+  ['sbp0','sbp1'].forEach((id,j) => document.getElementById(id).style.display = j===i ? 'block' : 'none');
+  currentSBTab = i;
+}
+
+function triggerCompile() {
+  if (compiling) return;
+  compiling = true;
+  const dot = document.getElementById('cdot');
+  const btn = document.getElementById('compileBtn');
+  const status = document.getElementById('compileStatus');
+  const statusBar = document.getElementById('compileStatusBar');
+  dot.classList.add('busy');
+  btn.innerHTML = '<span class="compile-dot busy" id="cdot"></span>Compiling…';
+  status.textContent = 'Compiling…';
+  statusBar.textContent = 'Compiling…';
+  statusBar.className = 'status-warn';
+  setTimeout(() => {
+    compiling = false;
+    document.getElementById('cdot').classList.remove('busy');
+    btn.innerHTML = '<span class="compile-dot" id="cdot"></span>Compile';
+    status.textContent = 'Compiled 0s ago';
+    statusBar.textContent = 'Compiled · 0 errors';
+    statusBar.className = 'status-ok';
+  }, 1800);
+}
+
+setSplit(55);
+</script>
+
+</div>

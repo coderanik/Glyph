@@ -2,7 +2,12 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import Sidebar from '@/components/Sidebar';
+import SidebarNew from '@/components/SidebarNew';
+import ActivityBar from '@/components/ActivityBar';
+import Titlebar from '@/components/Titlebar';
+import EditorTabs from '@/components/EditorTabs';
+import PaneHeader from '@/components/PaneHeader';
+import StatusBar from '@/components/StatusBar';
 import PdfViewer from '@/components/PdfViewer';
 import UserDropdown from '@/components/UserDropdown';
 import {
@@ -16,12 +21,20 @@ const Editor = dynamic(() => import('@/components/Editor'), {
   ssr: false,
 });
 
+const tabs = [
+  { name: "main.tex", active: true, hasUnsavedChanges: true },
+  { name: "references.bib", active: false, hasUnsavedChanges: false },
+];
+
 export default function Home() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [bootMessage, setBootMessage] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [fileId, setFileId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarTab, setSidebarTab] = useState(0);
+  const [activityItem, setActivityItem] = useState(0);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const pdfObjectUrl = useRef<string | null>(null);
 
@@ -97,54 +110,87 @@ export default function Home() {
     }, 1200);
   }, [runCompile]);
 
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
-    <div className="flex bg-white dark:bg-zinc-950 h-screen overflow-hidden text-zinc-900 dark:text-zinc-100">
-      <Sidebar />
+    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      {/* Titlebar */}
+      <Titlebar
+        projectName="thesis-draft"
+        fileName="main.tex"
+        isCompiling={isCompiling}
+        onCompile={runCompile}
+        canCompile={!!projectId}
+      />
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 shrink-0 transition-colors">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-medium tracking-tight">
-              Thesis Main
-            </h2>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={runCompile}
-              className={`px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors shadow-sm ${isCompiling || !projectId ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isCompiling || !projectId}
-            >
-              Compile
-            </button>
-            <UserDropdown />
-          </div>
-        </header>
+      {/* Main body */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Activity Bar */}
+        <ActivityBar
+          activeItem={activityItem}
+          onItemClick={setActivityItem}
+          onToggleSidebar={handleToggleSidebar}
+          sidebarOpen={sidebarOpen}
+        />
 
-        <div className="flex-1 overflow-hidden flex flex-row">
+        {/* Sidebar */}
+        <SidebarNew
+          isOpen={sidebarOpen}
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
+        />
 
-          <div className="w-1/2 h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
-            <div className="flex-1 relative">
-              {fileId ? (
-                <Editor fileId={fileId} onChange={handleEditorChange} />
-              ) : (
-                <div className="h-full flex items-center justify-center text-sm text-zinc-500 p-4 text-center">
-                  {bootMessage ?? "Loading editor…"}
-                </div>
-              )}
+        {/* Editor Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tabs */}
+          <EditorTabs
+            tabs={tabs}
+            onTabClick={(idx) => console.log("Tab click", idx)}
+          />
+
+          {/* Split pane */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Editor pane */}
+            <div className="w-1/2 flex flex-col border-r border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <PaneHeader title="Editor" subtitle="Ln 14, Col 22" type="editor" />
+              <div className="flex-1 relative overflow-hidden">
+                {fileId ? (
+                  <Editor fileId={fileId} onChange={handleEditorChange} />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-zinc-500 p-4 text-center">
+                    {bootMessage ?? "Loading editor…"}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Preview pane */}
+            <div className="w-1/2 flex flex-col overflow-hidden bg-zinc-50 dark:bg-[#1A1A1A]">
+              <PaneHeader
+                title="Preview"
+                type="preview"
+                compileStatus={isCompiling ? "Compiling…" : pdfUrl ? "Compiled" : undefined}
+              />
+              <PdfViewer
+                isCompiling={isCompiling}
+                pdfUrl={pdfUrl}
+                statusMessage={bootMessage}
+              />
             </div>
           </div>
 
-          <div className="w-1/2 h-full bg-zinc-50 dark:bg-[#1A1A1A] flex flex-col relative">
-            <PdfViewer
-              isCompiling={isCompiling}
-              pdfUrl={pdfUrl}
-              statusMessage={bootMessage}
-            />
-          </div>
-
+          {/* Status bar */}
+          <StatusBar
+            connected={true}
+            onlineCount={2}
+            wordCount={4812}
+            hasErrors={false}
+            errorCount={0}
+          />
         </div>
-      </main>
+      </div>
     </div>
   );
 }

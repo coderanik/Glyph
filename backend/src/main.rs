@@ -48,6 +48,12 @@ async fn main() -> anyhow::Result<()> {
         panic!("State initialization is required: {}", e);
     });
 
+    // Run migrations
+    sqlx::migrate!("./migrations")
+        .run(&state.db)
+        .await
+        .expect("Failed to run migrations");
+
     // Spawn persistence worker
     let worker_state = state.clone();
     tokio::spawn(async move {
@@ -89,16 +95,18 @@ async fn main() -> anyhow::Result<()> {
         // Collaboration
         .route("/ws/{file_id}", get(ws_handler))
         .with_state(state)
-        // Middleware must be applied *after* `with_state` so it wraps the full service (see axum middleware docs).
         .layer(
-            CorsLayer::permissive()
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::Any)
+                .allow_methods(tower_http::cors::Any)
+                .allow_headers(tower_http::cors::Any)
         );
 
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(4000);
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], port));
     tracing::debug!("listening on {}", addr);
     
     let listener = tokio::net::TcpListener::bind(addr).await?;
