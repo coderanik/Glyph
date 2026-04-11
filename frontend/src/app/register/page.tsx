@@ -12,6 +12,14 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const handleGoogle = () => {
+    window.location.href = apiUrl("/auth/google");
+  };
+
+  const handleGithub = () => {
+    window.location.href = apiUrl("/auth/github");
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -27,7 +35,7 @@ export default function RegisterPage() {
 
       const data = await res.json();
       localStorage.setItem("glyph_token", data.token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     }
@@ -93,7 +101,35 @@ export default function RegisterPage() {
           </div>
         </form>
         
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-gray-500 dark:bg-gray-900">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <button
+              onClick={handleGoogle}
+              className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            >
+              Google
+            </button>
+            <button
+              onClick={handleGithub}
+              className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            >
+              GitHub
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
             Sign in
