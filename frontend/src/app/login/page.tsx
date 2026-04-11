@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       localStorage.setItem("glyph_token", data.token);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     }
