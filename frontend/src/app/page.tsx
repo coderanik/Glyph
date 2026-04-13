@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import './landing.css';
+import Image from 'next/image';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -21,11 +22,7 @@ export default function LandingPage() {
     <div className="landing-page">
       <nav className="nav">
         <div className="logo">
-          <div className="logo-mark">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 4h10M3 8h7M3 12h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </div>
+          <Image src="/logo.png" alt="Glyph Logo" width={28} height={28} className="rounded-[6px]" />
           Glyph
         </div>
         <div className="nav-links">
@@ -180,9 +177,7 @@ export default function LandingPage() {
 
       <footer className="footer">
         <div className="logo" style={{fontSize: '14px'}}>
-          <div className="logo-mark" style={{width: '20px', height: '20px'}}>
-            <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M3 8h7M3 12h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          </div>
+          <Image src="/logo.png" alt="Glyph Logo" width={20} height={20} className="rounded-[4px]" />
           Glyph
         </div>
         <div>Built with Rust, Next.js & Tauri · Open source</div>
