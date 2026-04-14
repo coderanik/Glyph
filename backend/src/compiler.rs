@@ -22,6 +22,7 @@ use crate::projects::check_project_permission;
 use crate::state::AppState;
 use serde::Serialize;
 use sqlx::FromRow;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub async fn compile_project(
@@ -34,14 +35,14 @@ pub async fn compile_project(
         return (StatusCode::FORBIDDEN, "Forbidden").into_response();
     }
 
-    let job_id = match sqlx::query!(
+    let job_id = match sqlx::query(
         "INSERT INTO compilation_jobs (project_id, status) VALUES ($1, 'queued') RETURNING id",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(&state.db)
     .await
     {
-        Ok(row) => row.id,
+        Ok(row) => row.get::<Uuid, _>("id"),
         Err(e) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -55,6 +56,13 @@ pub async fn compile_project(
     tokio::spawn(async move {
         if let Err(e) = run_compilation(state_clone, project_id, job_id).await {
             tracing::error!("Compilation failed for job {}: {}", job_id, e);
+            if let Err(update_err) = mark_job_failed(&state, job_id, &format!("{}", e)).await {
+                tracing::error!(
+                    "Could not persist failed status for job {}: {}",
+                    job_id,
+                    update_err
+                );
+            }
         }
     });
 
@@ -161,15 +169,26 @@ fn pdf_api_path(project_id: Uuid, job_id: Uuid) -> String {
     format!("/projects/{}/jobs/{}/pdf", project_id, job_id)
 }
 
+async fn mark_job_failed(state: &AppState, job_id: Uuid, logs: &str) -> anyhow::Result<()> {
+    sqlx::query(
+        "UPDATE compilation_jobs SET status = 'failed', logs = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2",
+    )
+    .bind(logs)
+    .bind(job_id)
+    .execute(&state.db)
+    .await?;
+    Ok(())
+}
+
 async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> anyhow::Result<()> {
     if let Err(e) = state.persist_sessions().await {
         tracing::warn!("persist_sessions before compile: {}", e);
     }
 
-    sqlx::query!(
+    sqlx::query(
         "UPDATE compilation_jobs SET status = 'running', started_at = CURRENT_TIMESTAMP WHERE id = $1",
-        job_id
     )
+    .bind(job_id)
     .execute(&state.db)
     .await?;
 
@@ -305,13 +324,13 @@ async fn run_compilation(state: AppState, project_id: Uuid, job_id: Uuid) -> any
         }
     }
 
-    sqlx::query!(
+    sqlx::query(
         "UPDATE compilation_jobs SET status = $1, logs = $2, pdf_url = $3, completed_at = CURRENT_TIMESTAMP WHERE id = $4",
-        status,
-        logs,
-        pdf_url,
-        job_id
     )
+    .bind(status)
+    .bind(logs)
+    .bind(pdf_url)
+    .bind(job_id)
     .execute(&state.db)
     .await?;
 
@@ -377,11 +396,9 @@ pub async fn get_job_pdf(
         return (StatusCode::FORBIDDEN, "Forbidden").into_response();
     }
 
-    let row = sqlx::query!(
-        "SELECT status FROM compilation_jobs WHERE id = $1 AND project_id = $2",
-        job_id,
-        project_id
-    )
+    let row = sqlx::query("SELECT status FROM compilation_jobs WHERE id = $1 AND project_id = $2")
+    .bind(job_id)
+    .bind(project_id)
     .fetch_optional(&state.db)
     .await;
 
@@ -397,7 +414,7 @@ pub async fn get_job_pdf(
         }
     };
 
-    if row.status != "success" {
+    if row.get::<String, _>("status") != "success" {
         return (
             StatusCode::BAD_REQUEST,
             "PDF not available for this job yet",
