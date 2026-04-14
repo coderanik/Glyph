@@ -11,8 +11,9 @@ use axum::{
     Router,
 };
 use std::net::SocketAddr;
-use axum::http::request::Parts;
-use axum::http::HeaderValue;
+use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
+use axum::http::{HeaderName, HeaderValue};
+use axum::http::Method;
 use tower_http::cors::CorsLayer;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -21,6 +22,7 @@ use crate::auth::{google_auth, google_callback, github_auth, github_callback, ge
 use crate::projects::{create_project, list_projects, create_file, get_project_files, update_file_content};
 use crate::compiler::{compile_project, get_job_pdf, get_job_status};
 use dotenvy::dotenv;
+use sqlx::Row;
 use yrs_axum::ws::AxumConn;
 use yrs_axum::AwarenessRef;
 use yrs::sync::Awareness;
@@ -97,9 +99,27 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state)
         .layer(
             CorsLayer::new()
-                .allow_origin(tower_http::cors::Any)
-                .allow_methods(tower_http::cors::Any)
-                .allow_headers(tower_http::cors::Any)
+                .allow_origin([
+                    "http://localhost:3000".parse::<HeaderValue>().unwrap(),
+                    "http://localhost:1420".parse::<HeaderValue>().unwrap(),
+                    "tauri://localhost".parse::<HeaderValue>().unwrap(),
+                ])
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
+                // With credentials, tower-http rejects wildcard `Access-Control-Allow-Headers: *`.
+                .allow_headers([
+                    ACCEPT,
+                    AUTHORIZATION,
+                    CONTENT_TYPE,
+                    ORIGIN,
+                    HeaderName::from_static("x-requested-with"),
+                ])
+                .allow_credentials(true),
         );
 
     let port: u16 = std::env::var("PORT")
@@ -123,18 +143,19 @@ async fn ws_handler(
     let awareness: AwarenessRef = if let Some(a) = state.session_store.get(&file_id) {
         a.clone()
     } else {
-        let file = sqlx::query!("SELECT content FROM files WHERE id = $1", file_id)
+        let file = sqlx::query("SELECT content FROM files WHERE id = $1")
+            .bind(file_id)
             .fetch_optional(&state.db)
             .await
             .unwrap();
 
         let doc = Doc::new();
         if let Some(f) = file {
-            if let Some(content) = f.content {
-                if let Ok(update) = Update::decode_v1(&content) {
+            if let Some(content) = f.get::<Option<Vec<u8>>, _>("content").as_deref() {
+                if let Ok(update) = Update::decode_v1(content) {
                     let mut txn = doc.transact_mut();
                     txn.apply_update(update);
-                } else if let Ok(s) = std::str::from_utf8(&content) {
+                } else if let Ok(s) = std::str::from_utf8(content) {
                     // Legacy/plaintext seed (e.g. first main.tex from API) — not Yjs-encoded
                     let text = doc.get_or_insert_text("codemirror");
                     let mut txn = doc.transact_mut();
