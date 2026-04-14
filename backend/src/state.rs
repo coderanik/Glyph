@@ -20,10 +20,12 @@ pub struct AppState {
 
 impl AppState {
     pub async fn new() -> anyhow::Result<Self> {
-        let database_url = std::env::var("DATABASE_URL")
-            .expect("DATABASE_URL must be set");
+        // Defaults match `docker-compose.yml` when Postgres/Redis are exposed on the host.
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://glyph:glyph_password@127.0.0.1:5433/glyph".to_string()
+        });
         let redis_url = std::env::var("REDIS_URL")
-            .expect("REDIS_URL must be set");
+            .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
 
         let db = PgPool::connect(&database_url).await?;
         let redis = RedisClient::open(redis_url)?;
@@ -31,13 +33,19 @@ impl AppState {
         let channels = DashMap::new();
 
         // Google OAuth Client
-        let google_client_id = ClientId::new(std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID must be set"));
-        let google_client_secret = ClientSecret::new(std::env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_SECRET must be set"));
+        let google_client_id = ClientId::new(std::env::var("GOOGLE_CLIENT_ID").unwrap_or_else(
+            |_| "local-google-client-id".to_string(),
+        ));
+        let google_client_secret = ClientSecret::new(std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_else(
+            |_| "local-google-client-secret".to_string(),
+        ));
         let google_auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
             .expect("Invalid authorization endpoint URL");
         let google_token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v4/token".to_string())
             .expect("Invalid token endpoint URL");
-        let google_redirect_url = RedirectUrl::new(std::env::var("GOOGLE_REDIRECT_URL").expect("GOOGLE_REDIRECT_URL must be set"))
+        let google_redirect_url = RedirectUrl::new(std::env::var("GOOGLE_REDIRECT_URL").unwrap_or_else(
+            |_| "http://localhost:4000/auth/google/callback".to_string(),
+        ))
             .expect("Invalid redirect URL");
 
         let google_client = BasicClient::new(
@@ -49,13 +57,19 @@ impl AppState {
         .set_redirect_uri(google_redirect_url);
 
         // GitHub OAuth Client
-        let github_client_id = ClientId::new(std::env::var("GITHUB_CLIENT_ID").expect("GITHUB_CLIENT_ID must be set"));
-        let github_client_secret = ClientSecret::new(std::env::var("GITHUB_CLIENT_SECRET").expect("GITHUB_CLIENT_SECRET must be set"));
+        let github_client_id = ClientId::new(std::env::var("GITHUB_CLIENT_ID").unwrap_or_else(
+            |_| "local-github-client-id".to_string(),
+        ));
+        let github_client_secret = ClientSecret::new(std::env::var("GITHUB_CLIENT_SECRET").unwrap_or_else(
+            |_| "local-github-client-secret".to_string(),
+        ));
         let github_auth_url = AuthUrl::new("https://github.com/login/oauth/authorize".to_string())
             .expect("Invalid authorization endpoint URL");
         let github_token_url = TokenUrl::new("https://github.com/login/oauth/access_token".to_string())
             .expect("Invalid token endpoint URL");
-        let github_redirect_url = RedirectUrl::new(std::env::var("GITHUB_REDIRECT_URL").expect("GITHUB_REDIRECT_URL must be set"))
+        let github_redirect_url = RedirectUrl::new(std::env::var("GITHUB_REDIRECT_URL").unwrap_or_else(
+            |_| "http://localhost:4000/auth/github/callback".to_string(),
+        ))
             .expect("Invalid redirect URL");
 
         let github_client = BasicClient::new(
@@ -81,11 +95,9 @@ impl AppState {
                 txn.encode_state_as_update_v1(&yrs::StateVector::default())
             };
 
-            sqlx::query!(
-                "UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-                update,
-                file_id
-            )
+            sqlx::query("UPDATE files SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+            .bind(update)
+            .bind(file_id)
             .execute(&self.db)
             .await?;
         }
