@@ -1,7 +1,7 @@
-/** Browser talks to Next; Rust API default is :4005 (see backend PORT). Use 127.0.0.1 to avoid IPv6 localhost quirks in WebViews. */
+/** Browser talks to Next; Rust API default is :4000 (docker-compose backend port). */
 const raw =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
-  "http://localhost:4005";
+  "http://localhost:4000";
 
 export const API_BASE = raw;
 
