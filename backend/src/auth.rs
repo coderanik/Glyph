@@ -52,14 +52,26 @@ pub async fn register(
 
     match user {
         Ok(user) => {
-            let token = generate_jwt(user.id).unwrap();
+            let token = match generate_jwt(user.id) {
+                Ok(token) => token,
+                Err(e) => {
+                    tracing::error!("JWT generation error during register: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to issue token").into_response();
+                }
+            };
             let response = serde_json::json!({
                 "token": token,
                 "user": user,
             });
             (StatusCode::CREATED, Json(response)).into_response()
         }
-        Err(_) => (StatusCode::CONFLICT, "User already exists").into_response(),
+        Err(sqlx::Error::Database(db_err)) if db_err.code().as_deref() == Some("23505") => {
+            (StatusCode::CONFLICT, "User already exists").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Register DB error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+        }
     }
 }
 
@@ -252,7 +264,7 @@ pub fn generate_jwt(user_id: Uuid) -> anyhow::Result<String> {
         iat: Utc::now().timestamp() as usize,
     };
 
-    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "glyph-dev-jwt-secret".to_string());
     let token = encode(
         &Header::default(),
         &claims,
@@ -292,7 +304,7 @@ where
             }
 
             let token = &auth_header[7..];
-            let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+            let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "glyph-dev-jwt-secret".to_string());
 
             let token_data = decode::<Claims>(
                 token,
