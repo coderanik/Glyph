@@ -1,196 +1,710 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import SidebarNew from '@/components/SidebarNew';
-import ActivityBar from '@/components/ActivityBar';
-import Titlebar from '@/components/Titlebar';
-import EditorTabs from '@/components/EditorTabs';
-import PaneHeader from '@/components/PaneHeader';
-import StatusBar from '@/components/StatusBar';
-import PdfViewer from '@/components/PdfViewer';
-import UserDropdown from '@/components/UserDropdown';
-import {
-  ensureProjectAndMainFile,
-  fetchJobPdf,
-  startCompile,
-  waitForCompile,
-} from '@/lib/compile';
+import { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useUser, UserButton, useAuth } from "@clerk/nextjs";
+import { apiUrl } from "@/lib/api";
+import "./dashboard.css";
 
-const Editor = dynamic(() => import('@/components/Editor'), {
-  ssr: false,
-});
+/* ── Icon components (inline SVGs to avoid icon library deps) ── */
 
-const tabs = [
-  { name: "main.tex", active: true, hasUnsavedChanges: true },
-  { name: "references.bib", active: false, hasUnsavedChanges: false },
+function IconPlus({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M8 3v10M3 8h10" />
+    </svg>
+  );
+}
+
+function IconGrid({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="5" height="5" rx="1" />
+      <rect x="10" y="3" width="5" height="5" rx="1" />
+      <rect x="3" y="10" width="5" height="5" rx="1" />
+      <rect x="10" y="10" width="5" height="5" rx="1" />
+    </svg>
+  );
+}
+
+function IconUser({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="6" r="3" />
+      <path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+    </svg>
+  );
+}
+
+function IconUsers({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="6" r="2.5" />
+      <path d="M2 16c0-2.8 2.2-5 5-5s5 2.2 5 5" />
+      <circle cx="13" cy="5.5" r="2" />
+      <path d="M13 11c2.2.4 4 2.2 4 4.5" />
+    </svg>
+  );
+}
+
+function IconArchive({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="14" height="4" rx="1" />
+      <path d="M3 7v7a1 1 0 001 1h10a1 1 0 001-1V7" />
+      <path d="M7 10h4" />
+    </svg>
+  );
+}
+
+function IconTrash({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 5h12M6 5V4a1 1 0 011-1h4a1 1 0 011 1v1" />
+      <path d="M5 5l1 10a1 1 0 001 1h4a1 1 0 001-1l1-10" />
+    </svg>
+  );
+}
+
+function IconTag({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5V4a1 1 0 011-1h5.5L15 8.5 9.5 14 3 9.5z" />
+      <circle cx="6.5" cy="6.5" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconSearch({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.5 10.5L14 14" />
+    </svg>
+  );
+}
+
+function IconFile({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 2h5l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" />
+      <path d="M9 2v4h4" />
+      <path d="M5 9h6M5 11.5h4" />
+    </svg>
+  );
+}
+
+function IconCopy({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="5" width="8" height="8" rx="1" />
+      <path d="M11 3H4a1 1 0 00-1 1v7" />
+    </svg>
+  );
+}
+
+function IconDownload({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v9M4.5 8L8 11.5 11.5 8" />
+      <path d="M3 13h10" />
+    </svg>
+  );
+}
+
+function IconShare({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="4" r="2" />
+      <circle cx="4" cy="8" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M6 9l4 2M6 7l4-2" />
+    </svg>
+  );
+}
+
+function IconSettings({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M2.9 13.1l1.4-1.4M11.7 4.3l1.4-1.4" />
+    </svg>
+  );
+}
+
+function IconSun({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+      <circle cx="8" cy="8" r="3" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" />
+    </svg>
+  );
+}
+
+function IconMoon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13.5 8.5A5.5 5.5 0 117.5 2.5a4 4 0 006 6z" />
+    </svg>
+  );
+}
+
+function IconTrashSmall({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 5h10M5.5 5V4a1 1 0 011-1h3a1 1 0 011 1v1" />
+      <path d="M4.5 5l.7 8a1 1 0 001 1h3.6a1 1 0 001-1l.7-8" />
+    </svg>
+  );
+}
+
+function IconX({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4L4 12M4 4l8 8" />
+    </svg>
+  );
+}
+
+function IconAcademic({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2L1 5.5 8 9l7-3.5L8 2z" />
+      <path d="M3 7.5v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4" />
+      <path d="M12 9v3" />
+    </svg>
+  );
+}
+
+function IconBriefcase({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="12" height="9" rx="1.5" />
+      <path d="M5 5V3a1 1 0 011-1h4a1 1 0 011 1v2" />
+      <path d="M2 8h12" />
+    </svg>
+  );
+}
+
+
+/* ── Nav items ── */
+const NAV_ITEMS = [
+  { icon: IconGrid, label: "All projects", id: "all" },
+  { icon: IconUser, label: "Your projects", id: "yours" },
+  { icon: IconUsers, label: "Shared with you", id: "shared" },
+  { icon: IconArchive, label: "Archived", id: "archived" },
+  { icon: IconTrash, label: "Trash", id: "trash" },
 ];
 
-export default function Home() {
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [bootMessage, setBootMessage] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [fileId, setFileId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState(0);
-  const [activityItem, setActivityItem] = useState(0);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const pdfObjectUrl = useRef<string | null>(null);
+const TAG_ITEMS = [
+  { label: "Research" },
+  { label: "Coursework" },
+];
 
+/* ── Component ── */
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
+  
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [activeNav, setActiveNav] = useState("all");
+  const [search, setSearch] = useState("");
+  const [selectAll, setSelectAll] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Database projects state
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true);
+
+  // New Project Flow States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [projectType, setProjectType] = useState("empty");
+  const [projectName, setProjectName] = useState("Untitled Project");
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Load theme from localStorage on mount
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("glyph_token") : null;
-    if (!token) {
-      setBootMessage("Sign in to sync projects and compile.");
-      return;
+    const savedTheme = localStorage.getItem("glyph-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
     }
-    let cancelled = false;
-    (async () => {
-      try {
-        const { projectId: pid, fileId: fid } = await ensureProjectAndMainFile(token);
-        if (!cancelled) {
-          setProjectId(pid);
-          setFileId(fid);
-          setBootMessage(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setBootMessage(e instanceof Error ? e.message : "Could not load project.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (pdfObjectUrl.current) {
-        URL.revokeObjectURL(pdfObjectUrl.current);
-      }
-    };
-  }, []);
-
-  const runCompile = useCallback(async () => {
-    const token = localStorage.getItem("glyph_token");
-    if (!token || !projectId) {
-      setBootMessage("Sign in and wait for the project to load before compiling.");
-      return;
-    }
-    if (pdfObjectUrl.current) {
-      URL.revokeObjectURL(pdfObjectUrl.current);
-      pdfObjectUrl.current = null;
-    }
-    setPdfUrl(null);
-    setIsCompiling(true);
+  // Fetch real projects from DB
+  const loadProjectsFromDb = async () => {
     try {
-      const jobId = await startCompile(projectId, token);
-      const result = await waitForCompile(projectId, jobId, token);
-      if (result.status === "failed") {
-        setBootMessage(result.logs ?? "Compilation failed — check logs.");
-        return;
+      const token = await getToken();
+      if (!token) return;
+
+      const res = await fetch(apiUrl("/projects"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setProjectsList(data);
       }
-      const blob = await fetchJobPdf(projectId, jobId, token);
-      const url = URL.createObjectURL(blob);
-      pdfObjectUrl.current = url;
-      setPdfUrl(url);
-      setBootMessage(null);
-    } catch (e) {
-      setBootMessage(e instanceof Error ? e.message : "Compile failed.");
+    } catch (err) {
+      console.error("Failed to load projects:", err);
     } finally {
-      setIsCompiling(false);
+      setIsProjectsLoading(false);
     }
-  }, [projectId]);
-
-  const handleEditorChange = useCallback(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      runCompile();
-    }, 1200);
-  }, [runCompile]);
-
-  const handleToggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
   };
 
+  useEffect(() => {
+    if (isLoaded && user) {
+      loadProjectsFromDb();
+    }
+  }, [isLoaded, user]);
+
+  const filteredProjects = useMemo(() => {
+    let list = projectsList;
+    if (activeNav === "yours") {
+      list = projectsList.filter((p) => p.role === "owner");
+    } else if (activeNav === "shared") {
+      list = projectsList.filter((p) => p.role !== "owner");
+    } else if (activeNav === "archived") {
+      list = [];
+    } else if (activeNav === "trash") {
+      list = [];
+    }
+
+    const q = search.toLowerCase();
+    return list.filter((p) => p.name.toLowerCase().includes(q));
+  }, [search, projectsList, activeNav]);
+
+  const toggleTheme = () => {
+    setTheme((t) => {
+      const nextTheme = t === "light" ? "dark" : "light";
+      localStorage.setItem("glyph-theme", nextTheme);
+      return nextTheme;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filteredProjects.map((p) => p.id)));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleSelectRow = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelected(next);
+    setSelectAll(next.size === filteredProjects.length);
+  };
+
+  // Create Project handler
+  const handleCreateProject = async () => {
+    if (!projectName.trim()) return;
+    setIsCreating(true);
+
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      // 1. Create project metadata
+      const res = await fetch(apiUrl("/projects"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: projectName }),
+      });
+
+      if (!res.ok) throw new Error("Could not create project");
+      const project = await res.json();
+
+      // 2. Write initial default main.tex file (needed by compiler)
+      const defaultContent = `\\documentclass{article}
+\\begin{document}
+\\title{${projectName}}
+\\author{${user?.fullName || "Author"}}
+\\date{\\today}
+\\maketitle
+
+\\section{Introduction}
+Start writing your LaTeX document here...
+
+\\end{document}
+`;
+
+      await fetch(apiUrl(`/projects/${project.id}/files`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: "main.tex",
+          path: "main.tex",
+          content: defaultContent,
+        }),
+      });
+
+      // 3. Redirect to the editor page
+      router.push(`/projects/${project.id}`);
+    } catch (err) {
+      console.error("Failed to create project:", err);
+      alert("Failed to create project. Please try again.");
+    } finally {
+      setIsCreating(false);
+      setIsModalOpen(false);
+    }
+  };
+
+  const userName = isLoaded && user ? (user.firstName ?? user.username ?? "User") : "User";
+  const userInitials = isLoaded && user
+    ? (user.firstName?.[0] ?? "").toUpperCase() + (user.lastName?.[0] ?? "").toUpperCase() || "U"
+    : "U";
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      {/* Titlebar */}
-      <Titlebar
-        projectName="thesis-draft"
-        fileName="main.tex"
-        isCompiling={isCompiling}
-        onCompile={runCompile}
-        canCompile={!!projectId}
-      />
+    <div className={`dashboard ${theme}`}>
+      {/* ── Sidebar ── */}
+      <aside className="dash-sidebar">
+        <div className="dash-sidebar-top">
+          <div className="dash-logo">
+            <div className="dash-logo-mark">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 4h10M3 8h7M3 12h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            Glyph
+          </div>
+          <button 
+            className="dash-btn-new"
+            onClick={() => {
+              setProjectName("Untitled LaTeX Project");
+              setProjectType("empty");
+              setIsModalOpen(true);
+            }}
+          >
+            <IconPlus size={14} />
+            New project
+          </button>
+        </div>
 
-      {/* Main body */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Activity Bar */}
-        <ActivityBar
-          activeItem={activityItem}
-          onItemClick={setActivityItem}
-          onToggleSidebar={handleToggleSidebar}
-          sidebarOpen={sidebarOpen}
-        />
+        <div className="dash-nav-section">
+          {NAV_ITEMS.map((item) => (
+            <div
+              key={item.id}
+              className={`dash-nav-item ${activeNav === item.id ? "active" : ""}`}
+              onClick={() => setActiveNav(item.id)}
+            >
+              <item.icon size={17} />
+              {item.label}
+            </div>
+          ))}
+        </div>
 
-        {/* Sidebar */}
-        <SidebarNew
-          isOpen={sidebarOpen}
-          activeTab={sidebarTab}
-          onTabChange={setSidebarTab}
-        />
+        <div className="dash-nav-section">
+          <div className="dash-nav-label">Tags</div>
+          {TAG_ITEMS.map((tag) => (
+            <div key={tag.label} className="dash-nav-item">
+              <IconTag size={17} />
+              {tag.label}
+            </div>
+          ))}
+          <div className="dash-nav-item dash-nav-item-muted">
+            <IconPlus size={17} />
+            New tag
+          </div>
+        </div>
 
-        {/* Editor Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tabs */}
-          <EditorTabs
-            tabs={tabs}
-            onTabClick={(idx) => console.log("Tab click", idx)}
-          />
+        <div className="dash-sidebar-footer">
+          <div className="dash-user-row">
+            {isLoaded && user ? (
+              <UserButton />
+            ) : (
+              <div className="dash-avatar">{userInitials}</div>
+            )}
+            <div>
+              <div className="dash-user-name">{userName}</div>
+              <div className="dash-user-plan">Free plan</div>
+            </div>
+            <Link href="/settings" style={{ marginLeft: "auto", display: "flex" }}>
+              <button className="dash-icon-btn" aria-label="Settings">
+                <IconSettings size={16} />
+              </button>
+            </Link>
+          </div>
+        </div>
+      </aside>
 
-          {/* Split pane */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Editor pane */}
-            <div className="w-1/2 flex flex-col border-r border-zinc-200 dark:border-zinc-800 overflow-hidden">
-              <PaneHeader title="Editor" subtitle="Ln 14, Col 22" type="editor" />
-              <div className="flex-1 relative overflow-hidden">
-                {fileId ? (
-                  <Editor fileId={fileId} onChange={handleEditorChange} />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-zinc-500 p-4 text-center">
-                    {bootMessage ?? "Loading editor…"}
+      {/* ── Main content ── */}
+      <main className="dash-main">
+        <div className="dash-topbar">
+          <div className="dash-topbar-left">
+            <span className="dash-topbar-title">
+              {activeNav === "all" && "All projects"}
+              {activeNav === "yours" && "Your projects"}
+              {activeNav === "shared" && "Shared with you"}
+              {activeNav === "archived" && "Archived"}
+              {activeNav === "trash" && "Trash"}
+            </span>
+          </div>
+          <div className="dash-topbar-right">
+            <div className="dash-search-wrap">
+              <IconSearch size={15} />
+              <input
+                className="dash-search-input"
+                type="text"
+                placeholder="Search projects…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              className="dash-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {theme === "light" ? <IconMoon size={15} /> : <IconSun size={15} />}
+            </button>
+          </div>
+        </div>
+
+        <div className="dash-content">
+          <div className="dash-table-wrap">
+            {isProjectsLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs font-medium text-zinc-500">Loading projects...</p>
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="mx-auto mb-3 text-zinc-300 dark:text-zinc-700 flex justify-center">
+                  <IconFile size={36} />
+                </div>
+                <p className="text-sm font-medium text-zinc-500">
+                  {activeNav === "archived"
+                    ? "No archived projects"
+                    : activeNav === "trash"
+                    ? "Trash is empty"
+                    : "No projects found"}
+                </p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {activeNav === "archived"
+                    ? "Archived documents will appear here."
+                    : activeNav === "trash"
+                    ? "Trash items are cleaned up automatically."
+                    : "Create a new project to get started."}
+                </p>
+              </div>
+            ) : (
+              <table className="dash-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 40 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </th>
+                    <th>Title</th>
+                    <th>Owner</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjects.map((project) => (
+                    <tr key={project.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(project.id)}
+                          onChange={() => handleSelectRow(project.id)}
+                          aria-label={`Select ${project.name}`}
+                        />
+                      </td>
+                      <td>
+                        <Link href={`/projects/${project.id}`}>
+                          <div className="dash-td-title cursor-pointer hover:opacity-85 transition-opacity">
+                            <div className="dash-file-icon">
+                              <IconFile size={15} />
+                            </div>
+                            <div>
+                              <div className="dash-td-name font-medium">{project.name}</div>
+                              <div className="dash-td-meta">
+                                main.tex
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </td>
+                      <td>
+                        {project.role === "owner" ? (
+                          <span className="dash-badge dash-badge-you">
+                            You
+                          </span>
+                        ) : (
+                          <div className="flex flex-col text-left">
+                            <span className="text-[12px] font-medium text-text-primary leading-normal">
+                              {project.ownerName || "Collaborator"}
+                            </span>
+                            <span className="text-[10px] text-text-tertiary font-normal leading-normal">
+                              Shared by {project.ownerFirstName || "owner"}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="dash-status-pill">
+                          <div className="dash-dot-green" />
+                          {new Date(project.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="dash-td-actions">
+                          <button className="dash-icon-btn" aria-label="Copy">
+                            <IconCopy size={15} />
+                          </button>
+                          <button className="dash-icon-btn" aria-label="Download">
+                            <IconDownload size={15} />
+                          </button>
+                          <button className="dash-icon-btn" aria-label="Share">
+                            <IconShare size={15} />
+                          </button>
+                          <button className="dash-icon-btn" aria-label="Delete">
+                            <IconTrashSmall size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {!isProjectsLoading && (
+              <div className="dash-footer-count">
+                {search
+                  ? `Showing ${filteredProjects.length} of ${projectsList.length} projects`
+                  : `Showing ${projectsList.length} of ${projectsList.length} projects`}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* ── New Project Modal ── */}
+      {isModalOpen && (
+        <div className="dash-modal-overlay" onClick={() => !isCreating && setIsModalOpen(false)}>
+          <div className="dash-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dash-modal-header">
+              <div>
+                <h3 className="dash-modal-title">Create New Project</h3>
+                <p className="dash-modal-desc">Start composing a new LaTeX document.</p>
+              </div>
+              <button 
+                className="dash-modal-close" 
+                onClick={() => setIsModalOpen(false)}
+                disabled={isCreating}
+                aria-label="Close modal"
+              >
+                <IconX size={16} />
+              </button>
+            </div>
+
+            {/* Step 1: Select Template */}
+            <div className="dash-modal-field">
+              <label className="dash-modal-label">Project Template</label>
+              <div className="dash-modal-templates">
+                <div 
+                  className={`dash-template-card ${projectType === "empty" ? "active" : ""}`}
+                  onClick={() => setProjectType("empty")}
+                >
+                  <div className="dash-template-icon">
+                    <IconPlus size={18} />
                   </div>
-                )}
+                  <div className="dash-template-info">
+                    <div className="dash-template-title">Empty Project</div>
+                    <div className="dash-template-desc">A clean slate with basic LaTeX configuration.</div>
+                  </div>
+                </div>
+
+                <div className="dash-template-card disabled">
+                  <div className="dash-template-icon">
+                    <IconAcademic size={18} />
+                  </div>
+                  <div className="dash-template-info">
+                    <div className="dash-template-title">Academic Thesis</div>
+                    <div className="dash-template-desc">Multi-file document for research papers.</div>
+                  </div>
+                  <span className="dash-template-badge">Soon</span>
+                </div>
+
+                <div className="dash-template-card disabled">
+                  <div className="dash-template-icon">
+                    <IconBriefcase size={18} />
+                  </div>
+                  <div className="dash-template-info">
+                    <div className="dash-template-title">Resume / CV</div>
+                    <div className="dash-template-desc">Professional single-page curriculum vitae.</div>
+                  </div>
+                  <span className="dash-template-badge">Soon</span>
+                </div>
               </div>
             </div>
 
-            {/* Preview pane */}
-            <div className="w-1/2 flex flex-col overflow-hidden bg-zinc-50 dark:bg-[#1A1A1A]">
-              <PaneHeader
-                title="Preview"
-                type="preview"
-                compileStatus={isCompiling ? "Compiling…" : pdfUrl ? "Compiled" : undefined}
-              />
-              <PdfViewer
-                isCompiling={isCompiling}
-                pdfUrl={pdfUrl}
-                statusMessage={bootMessage}
-              />
+            {/* Step 2: Name */}
+            {projectType === "empty" && (
+              <div className="dash-modal-field">
+                <label className="dash-modal-label">Project Name</label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Enter project name..."
+                  className="dash-modal-input"
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="dash-modal-actions">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isCreating}
+                className="dash-modal-btn dash-modal-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateProject}
+                disabled={isCreating || !projectName.trim()}
+                className="dash-modal-btn dash-modal-btn-create"
+              >
+                {isCreating ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  <span>Create Project</span>
+                )}
+              </button>
             </div>
           </div>
-
-          {/* Status bar */}
-          <StatusBar
-            connected={true}
-            onlineCount={2}
-            wordCount={4812}
-            hasErrors={false}
-            errorCount={0}
-          />
         </div>
-      </div>
+      )}
     </div>
   );
 }
