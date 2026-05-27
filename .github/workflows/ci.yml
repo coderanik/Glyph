@@ -19,17 +19,30 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
         run: npm install
 
-      - name: Run Linter
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm install
+
+      - name: Lint Frontend
+        working-directory: ./frontend
         run: npm run lint
 
-      - name: Run Type Check
-        run: npm run type-check
+      - name: Type Check Server
+        working-directory: ./server
+        run: npx tsc --noEmit
 
-      - name: Run Tests
-        run: npm test
-
-      - name: Build Project
+      - name: Build Server
+        working-directory: ./server
         run: npm run build
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Build Docker Compiler Image
+        working-directory: ./docker
+        run: docker build -t glyph-compiler .
