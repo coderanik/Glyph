@@ -5,18 +5,30 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import './landing.css';
 import Image from 'next/image';
+import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
+
+function Show({ children, when }: { children: React.ReactNode; when: 'signed-in' | 'signed-out' }) {
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return null;
+  if (when === 'signed-in' && isSignedIn) return <>{children}</>;
+  if (when === 'signed-out' && !isSignedIn) return <>{children}</>;
+  return null;
+}
 
 export default function LandingPage() {
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useAuth();
 
   useEffect(() => {
-    // If the user already has a token, we could auto-redirect them to the dashboard.
-    // Uncomment if auto-redirect is desired:
-    // const token = localStorage.getItem("glyph_token");
-    // if (token) {
-    //   router.push("/dashboard");
-    // }
-  }, [router]);
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  // To prevent flash of landing page content for logged-in users
+  if (isLoaded && isSignedIn) {
+    return null;
+  }
 
   return (
     <div className="landing-page">
@@ -26,17 +38,34 @@ export default function LandingPage() {
           Glyph
         </div>
         <div className="nav-links">
-          <Link href="/login" className="btn-ghost" style={{ textDecoration: 'none' }}>Sign in</Link>
-          <Link href="/register" className="btn-primary" style={{ textDecoration: 'none' }}>Sign up free</Link>
+          <Show when="signed-out">
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="btn-ghost" style={{ textDecoration: 'none' }}>Sign in</button>
+            </SignInButton>
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="btn-primary" style={{ textDecoration: 'none' }}>Sign up free</button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <Link href="/dashboard" className="btn-ghost" style={{ textDecoration: 'none', marginRight: '8px' }}>Dashboard</Link>
+            <UserButton />
+          </Show>
         </div>
       </nav>
 
       <div className="hero">
         <div className="badge"><span className="badge-dot"></span>Now in beta — free to use</div>
         <h1>Collaborative <span>LaTeX editing</span>, reimagined</h1>
-        <p>A lightweight, real-time LaTeX editor built on Rust and Next.js. Write, compile, and collaborate — all in your browser or on your desktop.</p>
+        <p>A lightweight, real-time LaTeX editor built on Rust and Next.js. Write, compile, and collaborate — all in your browser.</p>
         <div className="hero-actions">
-          <Link href="/register" className="btn-large btn-large-primary" style={{ textDecoration: 'none' }}>Get started for free</Link>
+          <Show when="signed-out">
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="btn-large btn-large-primary" style={{ textDecoration: 'none' }}>Get started for free</button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <Link href="/dashboard" className="btn-large btn-large-primary" style={{ textDecoration: 'none' }}>Go to Dashboard</Link>
+          </Show>
           <a href="https://github.com" target="_blank" rel="noreferrer" className="btn-large btn-large-ghost" style={{ textDecoration: 'none' }}>View on GitHub</a>
         </div>
       </div>
@@ -141,10 +170,10 @@ export default function LandingPage() {
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{background: '#FAECE7'}}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="3" width="12" height="12" rx="2" fill="#D85A30"/><path d="M6 9l2 2 4-4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="6" height="12" rx="1" fill="#D85A30"/><rect x="10" y="3" width="6" height="12" rx="1" fill="#F4A286"/></svg>
             </div>
-            <h3>Desktop app via Tauri</h3>
-            <p>Native desktop experience on Mac, Windows, and Linux — same codebase, zero compromise.</p>
+            <h3>Side-by-side PDF preview</h3>
+            <p>View your compiled document side-by-side with your LaTeX source code in real-time.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{background: '#EEEDFE'}}>
@@ -162,7 +191,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="stack-pills">
-          <div className="pill">Rust</div><div className="pill">Axum</div><div className="pill">Tokio</div><div className="pill">Next.js 15</div><div className="pill">TypeScript</div><div className="pill">Tailwind CSS</div><div className="pill">Yjs</div><div className="pill">CodeMirror 6</div><div className="pill">Tauri</div><div className="pill">PostgreSQL</div><div className="pill">Redis</div><div className="pill">Docker</div>
+          <div className="pill">Rust</div><div className="pill">Axum</div><div className="pill">Tokio</div><div className="pill">Next.js 15</div><div className="pill">TypeScript</div><div className="pill">Tailwind CSS</div><div className="pill">Yjs</div><div className="pill">CodeMirror 6</div><div className="pill">PostgreSQL</div><div className="pill">Redis</div><div className="pill">Docker</div>
         </div>
       </div>
 
@@ -170,8 +199,17 @@ export default function LandingPage() {
         <h2>Start writing better LaTeX today</h2>
         <p>Free during beta. No credit card required.</p>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap'}}>
-          <Link href="/register" className="btn-large btn-large-primary" style={{background: '#534AB7', border: 'none', color: '#fff', textDecoration: 'none'}}>Create a free account</Link>
-          <Link href="/login" className="btn-large btn-large-ghost" style={{textDecoration: 'none'}}>Sign in</Link>
+          <Show when="signed-out">
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="btn-large btn-large-primary" style={{background: '#534AB7', border: 'none', color: '#fff', textDecoration: 'none'}}>Create a free account</button>
+            </SignUpButton>
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="btn-large btn-large-ghost" style={{textDecoration: 'none'}}>Sign in</button>
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            <Link href="/dashboard" className="btn-large btn-large-primary" style={{background: '#534AB7', border: 'none', color: '#fff', textDecoration: 'none'}}>Go to Dashboard</Link>
+          </Show>
         </div>
       </div>
 
@@ -180,7 +218,7 @@ export default function LandingPage() {
           <Image src="/logo.png" alt="Glyph Logo" width={20} height={20} className="rounded-[4px]" />
           Glyph
         </div>
-        <div>Built with Rust, Next.js & Tauri · Open source</div>
+        <div>Built with Rust & Next.js · Open source</div>
         <div style={{display: 'flex', gap: '16px'}}><span>Docs</span><span>GitHub</span><span>Status</span></div>
       </footer>
     </div>
