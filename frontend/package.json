@@ -4,16 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:tauri": "next dev -p 1420",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.4.1",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.40.0",
-    "@tauri-apps/api": "^2.10.1",
     "codemirror": "^6.0.2",
+    "latex.js": "^0.12.6",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "react": "19.2.3",
