@@ -6,19 +6,23 @@ import {
   Folder,
   ChevronRight,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 
 type SidebarNewProps = {
   isOpen: boolean;
   activeTab: number;
   onTabChange: (tab: number) => void;
+  // Project files logic
+  projectName: string;
+  files: { id: string; name: string; path: string }[];
+  activeFileId: string | null;
+  onFileSelect: (fileId: string) => void;
+  onFileCreate?: () => void;
+  // Collaborators logic
+  collaborators?: { id: string; name: string; initials: string; color: string; online: boolean }[];
+  readOnly?: boolean;
 };
-
-const files = [
-  { name: "main.tex", active: true, hasWarning: false },
-  { name: "references.bib", active: false, hasWarning: false },
-  { name: "abstract.tex", active: false, hasWarning: true },
-];
 
 const outline = [
   { name: "1. Introduction", indent: 0 },
@@ -29,41 +33,42 @@ const outline = [
   { name: "4. Conclusion", indent: 0 },
 ];
 
-const collaborators = [
-  { name: "Anik (you)", initials: "AN", color: "#7c9fcc", online: true },
-  { name: "Priya", initials: "PR", color: "#e07b7b", online: true },
-  { name: "Keanu", initials: "KN", color: "#7dbf7a", online: false },
-];
-
 export default function SidebarNew({
   isOpen,
   activeTab,
   onTabChange,
+  projectName,
+  files = [],
+  activeFileId,
+  onFileSelect,
+  onFileCreate,
+  collaborators = [],
+  readOnly = false,
 }: SidebarNewProps) {
   const [foldersExpanded, setFoldersExpanded] = useState(true);
 
   if (!isOpen) return null;
 
   return (
-    <aside className="w-[200px] shrink-0 bg-zinc-50 dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden transition-all duration-200">
+    <aside className="w-[200px] shrink-0 bg-bg-secondary border-r border-border-secondary flex flex-col overflow-hidden transition-all duration-200 text-text-primary select-none">
       {/* Tabs */}
-      <div className="flex border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="flex border-b border-border-secondary shrink-0">
         <button
           onClick={() => onTabChange(0)}
-          className={`flex-1 h-8 flex items-center justify-center text-[10px] font-medium tracking-wider uppercase transition-colors border-b-2 ${
+          className={`flex-1 h-8 flex items-center justify-center text-[10px] font-medium tracking-wider uppercase transition-colors border-b-2 cursor-pointer ${
             activeTab === 0
-              ? "text-zinc-900 dark:text-zinc-100 border-blue-500"
-              : "text-zinc-500 border-transparent hover:text-zinc-700 dark:hover:text-zinc-300"
+              ? "text-text-primary border-accent"
+              : "text-text-tertiary border-transparent hover:text-text-primary"
           }`}
         >
           Files
         </button>
         <button
           onClick={() => onTabChange(1)}
-          className={`flex-1 h-8 flex items-center justify-center text-[10px] font-medium tracking-wider uppercase transition-colors border-b-2 ${
+          className={`flex-1 h-8 flex items-center justify-center text-[10px] font-medium tracking-wider uppercase transition-colors border-b-2 cursor-pointer ${
             activeTab === 1
-              ? "text-zinc-900 dark:text-zinc-100 border-blue-500"
-              : "text-zinc-500 border-transparent hover:text-zinc-700 dark:hover:text-zinc-300"
+              ? "text-text-primary border-accent"
+              : "text-text-tertiary border-transparent hover:text-text-primary"
           }`}
         >
           Outline
@@ -72,76 +77,88 @@ export default function SidebarNew({
 
       {/* Files Panel */}
       {activeTab === 0 && (
-        <div className="flex-1 overflow-y-auto">
-          <div className="py-2">
-            <div className="px-3 pb-1.5 text-[10px] font-medium tracking-wider uppercase text-zinc-500">
-              Project
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          <div className="py-2 shrink-0">
+            <div className="px-3 pb-1.5 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase text-text-tertiary">
+              <span>Project</span>
+              {!readOnly && onFileCreate && (
+                <button
+                  onClick={onFileCreate}
+                  className="p-0.5 rounded hover:bg-bg-primary hover:text-text-primary transition-colors cursor-pointer"
+                  title="Create new file"
+                >
+                  <Plus size={10} />
+                </button>
+              )}
             </div>
             <button
               onClick={() => setFoldersExpanded(!foldersExpanded)}
-              className="w-full flex items-center gap-1.5 px-3 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="w-full flex items-center gap-1.5 px-3 py-1 text-xs text-text-secondary hover:bg-bg-primary transition-colors cursor-pointer"
             >
               {foldersExpanded ? (
                 <ChevronDown size={12} />
               ) : (
                 <ChevronRight size={12} />
               )}
-              <Folder size={13} />
-              <span>thesis-draft</span>
+              <Folder size={13} className="text-accent" />
+              <span className="truncate font-medium">{projectName || "thesis-draft"}</span>
             </button>
             {foldersExpanded && (
-              <div className="pl-4">
-                {files.map((file, idx) => (
-                  <button
-                    key={idx}
-                    className={`w-full flex items-center gap-1.5 px-3 py-1 text-xs transition-colors ${
-                      file.active
-                        ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    }`}
-                  >
-                    <FileText size={13} className="text-zinc-400" />
-                    <span>{file.name}</span>
-                    {file.hasWarning && (
-                      <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-                        !
-                      </span>
-                    )}
-                  </button>
-                ))}
-                <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-zinc-500">
-                  <Folder size={13} />
-                  <span>figures/</span>
-                </div>
+              <div className="pl-3 mt-0.5">
+                {files.map((file) => {
+                  const isActive = file.id === activeFileId;
+                  return (
+                    <button
+                      key={file.id}
+                      onClick={() => onFileSelect(file.id)}
+                      className={`w-full flex items-center gap-1.5 px-3 py-1 text-xs transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-accent-bg text-accent font-semibold"
+                          : "text-text-secondary hover:bg-bg-primary"
+                      }`}
+                    >
+                      <FileText size={13} className={isActive ? "text-accent" : "text-text-tertiary"} />
+                      <span className="truncate">{file.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-1" />
+          <div className="h-px bg-border-secondary my-1 shrink-0" />
 
-          <div className="py-2">
-            <div className="px-3 pb-1.5 text-[10px] font-medium tracking-wider uppercase text-zinc-500">
+          {/* Collaborators List */}
+          <div className="py-2 flex-1 flex flex-col min-h-0">
+            <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-text-tertiary shrink-0">
               Collaborators
             </div>
-            {collaborators.map((collab, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-2 px-3 py-1 text-xs text-zinc-600 dark:text-zinc-400"
-              >
+            <div className="flex-1 overflow-y-auto">
+              {collaborators.map((collab, idx) => (
                 <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-semibold text-white shrink-0"
-                  style={{ background: collab.color }}
+                  key={idx}
+                  className="flex items-center gap-2 px-3 py-1 text-xs text-text-secondary"
                 >
-                  {collab.initials}
+                  <div
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white shrink-0"
+                    style={{ background: collab.color }}
+                  >
+                    {collab.initials}
+                  </div>
+                  <span className="truncate flex-1">{collab.name}</span>
+                  {collab.online ? (
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" title="Online" />
+                  ) : (
+                    <span className="text-[9px] text-text-tertiary shrink-0">Offline</span>
+                  )}
                 </div>
-                <span>{collab.name}</span>
-                {collab.online ? (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
-                ) : (
-                  <span className="ml-auto text-[10px] text-zinc-500">2h ago</span>
-                )}
-              </div>
-            ))}
+              ))}
+              {collaborators.length === 0 && (
+                <div className="px-3 text-[10px] text-text-tertiary italic">
+                  No other collaborators.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -150,17 +167,17 @@ export default function SidebarNew({
       {activeTab === 1 && (
         <div className="flex-1 overflow-y-auto">
           <div className="py-2">
-            <div className="px-3 pb-1.5 text-[10px] font-medium tracking-wider uppercase text-zinc-500">
+            <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-text-tertiary">
               Structure
             </div>
             {outline.map((item, idx) => (
               <button
                 key={idx}
-                className={`w-full flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
+                className={`w-full flex items-center gap-1.5 text-xs text-text-secondary hover:bg-bg-primary transition-colors cursor-pointer ${
                   item.indent ? "pl-6" : "pl-3"
                 } py-1 pr-3`}
               >
-                <FileText size={13} className="text-zinc-400 shrink-0" />
+                <FileText size={13} className="text-text-tertiary shrink-0" />
                 <span className="truncate">{item.name}</span>
               </button>
             ))}
