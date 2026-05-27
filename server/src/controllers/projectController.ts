@@ -232,7 +232,7 @@ async function runCompilationBackground(projectId: string, jobId: string) {
       const filesRes = await query('SELECT path, content FROM files WHERE project_id = $1', [projectId]);
       const files = filesRes.rows;
       
-      const mainFile = files.find((f) => f.path === 'main.tex');
+      const mainFile = files.find((f: any) => f.path === 'main.tex');
 
       if (!mainFile) {
         throw new Error("main.tex not found in project. A 'main.tex' file is required for compilation.");

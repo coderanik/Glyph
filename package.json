@@ -4,7 +4,8 @@
   "private": true,
   "description": "Glyph Workspace - A collaborative LaTeX editor",
   "workspaces": [
-    "frontend"
+    "frontend",
+    "server"
   ],
   "scripts": {
     "dev": "cd frontend && npm run dev",

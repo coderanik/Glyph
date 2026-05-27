@@ -25,7 +25,7 @@ export const pool = new Pool({
 });
 
 // Prevent unhandled errors from crashing the Node.js server when connections drop/time out in the pool
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('Unexpected error on idle pg pool client:', err);
 });
 
