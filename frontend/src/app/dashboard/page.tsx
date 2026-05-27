@@ -236,7 +236,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const savedTheme = localStorage.getItem("glyph-theme");
     if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
+      const t = setTimeout(() => setTheme(savedTheme), 0);
+      return () => clearTimeout(t);
     }
   }, []);
 
@@ -263,7 +264,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isLoaded && user) {
-      loadProjectsFromDb();
+      const t = setTimeout(() => loadProjectsFromDb(), 0);
+      return () => clearTimeout(t);
     }
   }, [isLoaded, user, loadProjectsFromDb]);
 

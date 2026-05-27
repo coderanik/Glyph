@@ -33,7 +33,8 @@ export default function ProjectEditorPage({
   useEffect(() => {
     const savedTheme = localStorage.getItem("glyph-theme");
     if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
+      const t = setTimeout(() => setTheme(savedTheme), 0);
+      return () => clearTimeout(t);
     }
   }, []);
   
@@ -67,9 +68,12 @@ export default function ProjectEditorPage({
 
   // Reset editorCode on fileId change to prevent content flash from previous file
   useEffect(() => {
-    setEditorCode("");
+    const t = setTimeout(() => {
+      setEditorCode("");
+      setAutoSaveStatus("idle");
+    }, 0);
     lastSavedContent.current = "";
-    setAutoSaveStatus("idle");
+    return () => clearTimeout(t);
   }, [fileId]);
 
   // Debounced auto-save: saves 2.5s after user stops typing
