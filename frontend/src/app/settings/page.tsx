@@ -18,7 +18,7 @@ export default function SettingsPage() {
         <header className="h-12 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 shrink-0 transition-colors">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.back()}
               className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors"
             >
               <ChevronLeft size={18} />
