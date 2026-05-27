@@ -8,6 +8,7 @@ import {
   Settings,
   PanelLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type ActivityBarProps = {
   activeItem: number;
@@ -29,17 +30,18 @@ export default function ActivityBar({
   onToggleSidebar,
   sidebarOpen,
 }: ActivityBarProps) {
+  const router = useRouter();
   return (
-    <div className="w-11 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col items-center py-2 gap-0.5">
+    <div className="w-11 shrink-0 bg-bg-primary border-r border-border-secondary flex flex-col items-center py-2 gap-0.5">
       <button
         onClick={onToggleSidebar}
-        className="w-8 h-8 rounded-md flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+        className="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
         title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
       >
         <PanelLeft size={16} />
       </button>
 
-      <div className="h-px w-6 bg-zinc-200 dark:bg-zinc-800 my-1" />
+      <div className="h-px w-6 bg-border-secondary my-1" />
 
       {items.map((item, index) => {
         const Icon = item.icon;
@@ -48,10 +50,10 @@ export default function ActivityBar({
           <button
             key={index}
             onClick={() => onItemClick(index)}
-            className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${
+            className={`w-8 h-8 rounded-md flex items-center justify-center transition-all ${
               isActive
-                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                ? "bg-accent-bg text-accent font-medium shadow-sm"
+                : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
             }`}
             title={item.label}
           >
@@ -63,7 +65,8 @@ export default function ActivityBar({
       <div className="flex-1" />
 
       <button
-        className="w-8 h-8 rounded-md flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+        onClick={() => router.push("/settings")}
+        className="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors cursor-pointer"
         title="Settings"
       >
         <Settings size={16} />
