@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser, UserButton, useAuth } from "@clerk/nextjs";
@@ -215,8 +214,16 @@ export default function DashboardPage() {
   const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // Database projects state
-  const [projectsList, setProjectsList] = useState<any[]>([]);
+  type ProjectData = {
+    id: string;
+    name: string;
+    role: string;
+    ownerName?: string;
+    ownerFirstName?: string;
+    createdAt: string;
+    [key: string]: unknown;
+  };
+  const [projectsList, setProjectsList] = useState<ProjectData[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
 
   // New Project Flow States
@@ -234,7 +241,7 @@ export default function DashboardPage() {
   }, []);
 
   // Fetch real projects from DB
-  const loadProjectsFromDb = async () => {
+  const loadProjectsFromDb = useCallback(async () => {
     try {
       const token = await getToken();
       if (!token) return;
@@ -252,13 +259,13 @@ export default function DashboardPage() {
     } finally {
       setIsProjectsLoading(false);
     }
-  };
+  }, [getToken]);
 
   useEffect(() => {
     if (isLoaded && user) {
       loadProjectsFromDb();
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, loadProjectsFromDb]);
 
   const filteredProjects = useMemo(() => {
     let list = projectsList;

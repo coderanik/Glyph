@@ -104,14 +104,14 @@ export default function LatexHtmlPreview({ code }: LatexHtmlPreviewProps) {
             setHtmlContent(doc.documentElement.outerHTML);
             setError(null);
           }
-        } catch (parseErr: any) {
+        } catch (parseErr: unknown) {
           if (active) {
-            setError(parseErr.message || "Failed to parse LaTeX syntax.");
+            setError(parseErr instanceof Error ? parseErr.message : "Failed to parse LaTeX syntax.");
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (active) {
-          setError(err.message || "Latex.js load failed.");
+          setError(err instanceof Error ? err.message : "Latex.js load failed.");
         }
       }
     }

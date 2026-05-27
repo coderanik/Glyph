@@ -25,7 +25,7 @@ function ShareAcceptInner() {
     }
 
     if (!token) {
-      setError("Invalid or missing invitation token.");
+      setTimeout(() => setError("Invalid or missing invitation token."), 0);
       return;
     }
 
@@ -54,7 +54,7 @@ function ShareAcceptInner() {
           const errText = await res.text();
           setError(errText || "Failed to accept sharing invitation.");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Accept invite error:", err);
         setError("Failed to connect to server. Please try again.");
       }

@@ -95,7 +95,7 @@ export default function Editor({
       view.destroy();
       provider.destroy();
     };
-  }, [fileId]);
+  }, [fileId, readOnly]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }

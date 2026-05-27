@@ -27,8 +27,8 @@ export default function UserDropdown() {
   // Verify backend connectivity via Clerk token
   useEffect(() => {
     if (!isSignedIn) {
-      setBackendVerified(null);
-      return;
+      const t = setTimeout(() => setBackendVerified(null), 0);
+      return () => clearTimeout(t);
     }
     
     let active = true;

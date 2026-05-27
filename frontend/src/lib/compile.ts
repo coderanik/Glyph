@@ -25,7 +25,7 @@ export async function ensureProjectAndMainFile(token: string): Promise<{
   projectId: string;
   fileId: string;
 }> {
-  let projectsRes = await fetch(apiUrl("/projects"), {
+  const projectsRes = await fetch(apiUrl("/projects"), {
     headers: authHeaders(token),
   });
   if (!projectsRes.ok) {

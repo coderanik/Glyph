@@ -48,7 +48,7 @@ export default function ProjectEditorPage({
   const [compileStatus, setCompileStatus] = useState<string | null>("Not compiled yet");
 
   // Sync / Connection state
-  const [connected, setConnected] = useState(true);
+  const [connected] = useState(true);
   const [wordCount, setWordCount] = useState(0);
 
   // Editor code content & preview mode
@@ -146,7 +146,7 @@ export default function ProjectEditorPage({
         });
         if (projectsRes.ok && active) {
           const list = await projectsRes.json();
-          const current = list.find((p: any) => p.id === projectId);
+          const current = list.find((p: { id: string; name: string; role: string }) => p.id === projectId);
           if (current) {
             setProjectName(current.name);
             setUserRole(current.role === "read" ? "read" : "write");
@@ -162,16 +162,16 @@ export default function ProjectEditorPage({
           list = await filesRes.json();
         }
 
-        const mainFile = list.find((f: any) => f.path === "main.tex");
+        const mainFile = list.find((f: { id: string; name: string; path: string }) => f.path === "main.tex");
         if (!mainFile && active) {
           // If main.tex doesn't exist and we have write permission, ensure it
           const projectsList = await fetch(apiUrl("/projects"), {
             headers: { Authorization: `Bearer ${token}` },
           });
           const pList = await projectsList.json();
-          const curr = pList.find((p: any) => p.id === projectId);
+          const curr = pList.find((p: { id: string; role: string }) => p.id === projectId);
           if (curr && curr.role !== "read") {
-            const { fileId: resolvedFileId } = await ensureProjectAndMainFile(token);
+            await ensureProjectAndMainFile(token);
             // Re-fetch files
             const reRes = await fetch(apiUrl(`/projects/${projectId}/files`), {
               headers: { Authorization: `Bearer ${token}` },
@@ -184,7 +184,7 @@ export default function ProjectEditorPage({
 
         if (active) {
           setProjectFiles(list);
-          const activeMain = list.find((f: any) => f.path === "main.tex");
+          const activeMain = list.find((f: { id: string; name: string; path: string }) => f.path === "main.tex");
           if (activeMain) {
             setFileId(activeMain.id);
           } else if (list.length > 0) {
@@ -224,7 +224,7 @@ export default function ProjectEditorPage({
             const collabList = await collabRes.json();
             setCollaborators(collabList);
           }
-        } catch (e) {}
+        } catch {}
       }
       reloadCollabs();
     }, 10000);
@@ -282,9 +282,9 @@ export default function ProjectEditorPage({
           setCompileStatus("Failed");
           setPdfUrl(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Compilation error:", err);
-        setCompileStatus(err.message || "Failed");
+        setCompileStatus(err instanceof Error ? err.message : "Failed");
       }
     });
   };
@@ -320,9 +320,9 @@ export default function ProjectEditorPage({
       document.body.removeChild(a);
 
       window.URL.revokeObjectURL(blobUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Download failed:", err);
-      alert(err.message || "Failed to download PDF");
+      alert(err instanceof Error ? err.message : "Failed to download PDF");
     }
   };
 

@@ -54,7 +54,7 @@ export default function ShareModal({
         const errText = await res.text();
         setError(errText || "Only the project owner can invite collaborators.");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to reach server. Please try again.");
     } finally {
       setLoading(false);

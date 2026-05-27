@@ -1,6 +1,6 @@
 "use client";
 
-import { WrapText, Focus, Download, Maximize, Link } from "lucide-react";
+import { WrapText, Focus, Download } from "lucide-react";
 
 type PaneHeaderProps = {
   title: string;
@@ -8,7 +8,6 @@ type PaneHeaderProps = {
   type: "editor" | "preview";
   compileStatus?: string;
   previewMode?: "pdf" | "live";
-  onPreviewModeChange?: (mode: "pdf" | "live") => void;
   onWrapToggle?: () => void;
   onFocusToggle?: () => void;
   onDownload?: () => void;
@@ -21,7 +20,6 @@ export default function PaneHeader({
   type,
   compileStatus,
   previewMode,
-  onPreviewModeChange,
   onDownload,
 }: PaneHeaderProps) {
   return (

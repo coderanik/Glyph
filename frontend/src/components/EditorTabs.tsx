@@ -1,17 +1,15 @@
 "use client";
 
-import { FileText, X } from "lucide-react";
+import { FileText } from "lucide-react";
 
 type EditorTabsProps = {
   tabs: { name: string; active: boolean; hasUnsavedChanges?: boolean }[];
   onTabClick: (index: number) => void;
-  onTabClose?: (index: number) => void;
 };
 
 export default function EditorTabs({
   tabs,
   onTabClick,
-  onTabClose,
 }: EditorTabsProps) {
   return (
     <div className="h-[34px] shrink-0 flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 overflow-x-auto">

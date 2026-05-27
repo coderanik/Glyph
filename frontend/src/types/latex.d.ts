@@ -1,7 +1,7 @@
 declare module 'latex.js' {
-  export function parse(latex: string, options?: any): any;
+  export function parse(latex: string, options?: unknown): unknown;
   export class HtmlGenerator {
-    constructor(options?: any);
+    constructor(options?: unknown);
     htmlDocument(baseURL?: string): Document;
   }
 }
