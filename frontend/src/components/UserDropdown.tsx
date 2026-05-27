@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Settings, User, LogOut } from "lucide-react";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
 
 function initialsFromName(name: string) {
@@ -18,36 +19,49 @@ export default function UserDropdown() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [userLabel, setUserLabel] = useState("");
+  
+  const { user, isSignedIn, isLoaded } = useUser();
+  const { signOut, getToken } = useAuth();
+  const [backendVerified, setBackendVerified] = useState<boolean | null>(null);
 
-  const refreshAuth = useCallback(() => {
-    const token = localStorage.getItem("glyph_token");
-    if (!token) {
-      setSignedIn(false);
-      setUserLabel("");
+  // Verify backend connectivity via Clerk token
+  useEffect(() => {
+    if (!isSignedIn) {
+      setBackendVerified(null);
       return;
     }
-    setSignedIn(true);
-    fetch(apiUrl("/auth/me"), {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((u: { name?: string } | null) => {
-        if (u?.name) setUserLabel(initialsFromName(u.name));
-        else setUserLabel("?");
-      })
-      .catch(() => setUserLabel("?"));
-  }, []);
-
-  useEffect(() => {
-    refreshAuth();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "glyph_token") refreshAuth();
+    
+    let active = true;
+    async function verifyBackend() {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        
+        const res = await fetch(apiUrl("/auth/me"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (res.ok && active) {
+          const data = await res.json();
+          console.log("Backend verified successfully via Clerk token:", data);
+          setBackendVerified(true);
+        } else if (active) {
+          console.error("Backend verification failed with status:", res.status);
+          setBackendVerified(false);
+        }
+      } catch (err) {
+        if (active) {
+          console.error("Failed to connect to backend for verification:", err);
+          setBackendVerified(false);
+        }
+      }
+    }
+    
+    verifyBackend();
+    return () => {
+      active = false;
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [refreshAuth]);
+  }, [isSignedIn, getToken]);
 
   // Close dropdown if clicking outside
   useEffect(() => {
@@ -62,18 +76,22 @@ export default function UserDropdown() {
     };
   }, [dropdownRef]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("glyph_token");
-    setSignedIn(false);
-    setUserLabel("");
+  const handleLogout = async () => {
+    await signOut();
     setIsOpen(false);
-    router.push("/login");
+    router.push("/sign-in");
   };
 
-  if (signedIn === false) {
+  if (!isLoaded) {
+    return (
+      <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" aria-hidden />
+    );
+  }
+
+  if (!isSignedIn || !user) {
     return (
       <Link
-        href="/login"
+        href="/sign-in"
         className="text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:text-green-600 dark:hover:text-green-400 px-2 py-1 rounded transition-colors"
       >
         Sign in
@@ -81,14 +99,25 @@ export default function UserDropdown() {
     );
   }
 
-  if (signedIn === null) {
-    return (
-      <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" aria-hidden />
-    );
-  }
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "User";
+  const userLabel = initialsFromName(name);
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative flex items-center gap-2" ref={dropdownRef}>
+      {/* Backend connection indicator */}
+      {backendVerified === false && (
+        <span 
+          className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" 
+          title="Disconnected from authentication backend"
+        />
+      )}
+      {backendVerified === true && (
+        <span 
+          className="w-1.5 h-1.5 rounded-full bg-green-500" 
+          title="Successfully authenticated with backend"
+        />
+      )}
+
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -100,6 +129,11 @@ export default function UserDropdown() {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg z-50 flex flex-col py-1 text-zinc-700 dark:text-zinc-300">
+          <div className="px-3 py-2 border-b border-zinc-100 dark:border-zinc-800/60">
+            <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">{name}</p>
+            <p className="text-[10px] text-zinc-400 truncate">{user.primaryEmailAddress?.emailAddress}</p>
+          </div>
+          
           <button 
             onClick={() => {
               setIsOpen(false);
