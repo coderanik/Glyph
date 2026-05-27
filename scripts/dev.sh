@@ -17,14 +17,9 @@ command -v node >/dev/null 2>&1 || { echo "❌ Node.js is required. Install it f
 command -v docker >/dev/null 2>&1 || { echo "❌ Docker is required for LaTeX compilation. Install Docker Desktop."; exit 1; }
 
 # ── Install dependencies if needed ─────────────────────────────
-if [ ! -d "frontend/node_modules" ]; then
-    echo "📦 Installing frontend dependencies..."
-    (cd frontend && npm install)
-fi
-
-if [ ! -d "server/node_modules" ]; then
-    echo "📦 Installing server dependencies..."
-    (cd server && npm install)
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing workspace dependencies at root..."
+    npm install
 fi
 
 # ── Build the LaTeX compiler Docker image ──────────────────────

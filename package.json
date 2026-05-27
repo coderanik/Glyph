@@ -8,11 +8,11 @@
     "server"
   ],
   "scripts": {
-    "dev": "cd frontend && npm run dev",
-    "backend:dev": "cd backend && cargo run",
+    "dev": "npm run dev -w frontend",
+    "server:dev": "npm run dev -w server",
     "lint": "npm run lint --workspaces --if-present",
-    "type-check": "cd frontend && npx tsc --noEmit",
-    "test": "cargo test --manifest-path backend/Cargo.toml && npm test --workspaces --if-present",
+    "type-check:frontend": "npm run type-check",
+    "type-check:server": "npx tsc --noEmit -w server",
     "build": "npm run build --workspaces --if-present",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"

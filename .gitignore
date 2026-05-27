@@ -12,5 +12,7 @@ node_modules/
 target/
 .next/
 out/
+dist/
+.data/
 
 glyph_landing_page.html

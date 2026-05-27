@@ -11,8 +11,11 @@ initializeDatabase().catch((err) => {
     console.error('Fatal: Failed to connect or initialize database:', err);
 });
 const app = new Hono();
+const frontendUrls = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+    : ['http://localhost:3000', 'http://localhost:3001'];
 app.use('*', cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: frontendUrls,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
     credentials: true,
@@ -23,9 +26,10 @@ app.route('/projects', projectRoutes);
 app.get('/', (c) => {
     return c.text('Backend is running!');
 });
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8083;
 const server = serve({
     fetch: app.fetch,
-    port: 8083
+    port
 }, (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);
 });
