@@ -11,9 +11,11 @@ import { WS_BASE } from "@/lib/api";
 export default function Editor({
   fileId,
   onChange,
+  readOnly = false,
 }: {
   fileId: string;
-  onChange?: () => void;
+  onChange?: (text: string) => void;
+  readOnly?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -50,17 +52,24 @@ export default function Editor({
     // Listen to changes deeply from the collaborative text instance directly
     ytext.observe(() => {
       if (onChangeRef.current) {
-        onChangeRef.current();
+        onChangeRef.current(ytext.toString());
       }
     });
 
     // Basic Editor View Setup
+    const extensions = [
+      basicSetup,
+      yCollab(ytext, provider.awareness)
+    ];
+
+    if (readOnly) {
+      extensions.push(EditorState.readOnly.of(true));
+      extensions.push(EditorView.editable.of(false));
+    }
+
     const state = EditorState.create({
       doc: ytext.toString(),
-      extensions: [
-        basicSetup,
-        yCollab(ytext, provider.awareness)
-      ]
+      extensions
     });
 
     const view = new EditorView({
@@ -68,6 +77,11 @@ export default function Editor({
       parent: editorRef.current,
     });
     viewRef.current = view;
+
+    // Initial content notify
+    if (onChangeRef.current) {
+      onChangeRef.current(ytext.toString());
+    }
 
     const connectId = window.setTimeout(() => {
       if (!cancelled) {
