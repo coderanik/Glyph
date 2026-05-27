@@ -2,14 +2,12 @@
   "name": "glyph-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Glyph Workspace - A cross-platform collaborative LaTeX editor",
+  "description": "Glyph Workspace - A collaborative LaTeX editor",
   "workspaces": [
-    "frontend",
-    "desktop"
+    "frontend"
   ],
   "scripts": {
     "dev": "cd frontend && npm run dev",
-    "tauri:dev": "cd desktop && npm run tauri dev",
     "backend:dev": "cd backend && cargo run",
     "lint": "npm run lint --workspaces --if-present",
     "type-check": "cd frontend && npx tsc --noEmit",
