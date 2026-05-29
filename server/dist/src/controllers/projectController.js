@@ -1,6 +1,7 @@
 import { getAuth } from '@hono/clerk-auth';
 import { query } from '../config/db.js';
 import crypto from 'crypto';
+import { forceSaveRoom } from '../config/yjsServer.js';
 async function checkProjectAccess(projectId, userId) {
     try {
         // Check if owner
@@ -162,6 +163,11 @@ export async function compileProject(c) {
         return c.json({ error: 'Forbidden: Read-Only access' }, 403);
     }
     try {
+        // Force-save any active Yjs rooms for this project to the DB before compilation
+        const filesRes = await query('SELECT id FROM files WHERE project_id = $1', [projectId]);
+        for (const row of filesRes.rows) {
+            await forceSaveRoom(row.id);
+        }
         const result = await query("INSERT INTO compilation_jobs (project_id, status, logs) VALUES ($1, $2, $3) RETURNING id", [projectId, 'queued', 'Job queued...']);
         const jobId = result.rows[0].id;
         return c.json({ job_id: jobId });

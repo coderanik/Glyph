@@ -149,3 +149,14 @@ export async function setupWSConnection(conn, roomName) {
         }
     });
 }
+export async function forceSaveRoom(roomName) {
+    const doc = docs.get(roomName);
+    if (doc) {
+        // Clear any pending save timeout
+        if (saveTimeouts.has(roomName)) {
+            clearTimeout(saveTimeouts.get(roomName));
+            saveTimeouts.delete(roomName);
+        }
+        await saveDocToDb(roomName, doc);
+    }
+}

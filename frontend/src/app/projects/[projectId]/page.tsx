@@ -76,55 +76,7 @@ export default function ProjectEditorPage({
     return () => clearTimeout(t);
   }, [fileId]);
 
-  // Debounced auto-save: saves 2.5s after user stops typing
-  useEffect(() => {
-    // Don't auto-save if read-only, no file selected, or content is empty/unchanged
-    if (userRole === "read" || !fileId || !editorCode) return;
-    if (editorCode === lastSavedContent.current) return;
 
-    // Clear any pending save timer
-    if (autoSaveTimer.current) {
-      clearTimeout(autoSaveTimer.current);
-    }
-
-    autoSaveTimer.current = setTimeout(async () => {
-      try {
-        const token = await getToken();
-        if (!token) return;
-
-        const activeFile = projectFiles.find((f) => f.id === fileId);
-        if (!activeFile) return;
-
-        setAutoSaveStatus("saving");
-
-        const res = await fetch(apiUrl(`/projects/${projectId}/files`), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: activeFile.name,
-            path: activeFile.path,
-            content: editorCode,
-          }),
-        });
-
-        if (res.ok) {
-          lastSavedContent.current = editorCode;
-          setAutoSaveStatus("saved");
-        }
-      } catch (err) {
-        console.error("Auto-save failed:", err);
-      }
-    }, 2500);
-
-    return () => {
-      if (autoSaveTimer.current) {
-        clearTimeout(autoSaveTimer.current);
-      }
-    };
-  }, [editorCode, fileId, userRole, getToken, projectId, projectFiles]);
 
   // Redirect if not signed in
   useEffect(() => {
@@ -242,7 +194,7 @@ export default function ProjectEditorPage({
   const handleCompile = () => {
     if (userRole === "read") return;
     startCompileTransition(async () => {
-      setCompileStatus("Saving document...");
+      setCompileStatus("Starting compilation...");
       try {
         const token = await getToken();
         if (!token) {
@@ -250,30 +202,6 @@ export default function ProjectEditorPage({
           return;
         }
 
-        // Find active file path/name
-        const activeFile = projectFiles.find((f) => f.id === fileId);
-        const name = activeFile?.name || "main.tex";
-        const path = activeFile?.path || "main.tex";
-
-        // Save current editor code to database prior to compilation
-        const saveRes = await fetch(apiUrl(`/projects/${projectId}/files`), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name,
-            path,
-            content: editorCode,
-          }),
-        });
-
-        if (!saveRes.ok) {
-          throw new Error("Failed to save draft to server");
-        }
-
-        setCompileStatus("Starting compilation...");
         const jobId = await startCompile(projectId, token);
         setCompileStatus("Compiling on server...");
 

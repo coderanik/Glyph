@@ -166,3 +166,15 @@ export async function setupWSConnection(conn: WebSocket, roomName: string) {
     }
   });
 }
+
+export async function forceSaveRoom(roomName: string) {
+  const doc = docs.get(roomName);
+  if (doc) {
+    // Clear any pending save timeout
+    if (saveTimeouts.has(roomName)) {
+      clearTimeout(saveTimeouts.get(roomName)!);
+      saveTimeouts.delete(roomName);
+    }
+    await saveDocToDb(roomName, doc);
+  }
+}
