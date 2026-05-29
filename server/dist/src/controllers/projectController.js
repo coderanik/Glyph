@@ -1,16 +1,6 @@
 import { getAuth } from '@hono/clerk-auth';
 import { query } from '../config/db.js';
-import fs from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-const execAsync = promisify(exec);
-const DATA_DIR = path.resolve('.data');
-const WORKSPACES_DIR = path.join(DATA_DIR, 'workspaces');
-// Ensure workspace directory exists on load
-fs.mkdir(WORKSPACES_DIR, { recursive: true }).catch(() => { });
 async function checkProjectAccess(projectId, userId) {
     try {
         // Check if owner
@@ -174,86 +164,11 @@ export async function compileProject(c) {
     try {
         const result = await query("INSERT INTO compilation_jobs (project_id, status, logs) VALUES ($1, $2, $3) RETURNING id", [projectId, 'queued', 'Job queued...']);
         const jobId = result.rows[0].id;
-        // Background compilation process
-        runCompilationBackground(projectId, jobId).catch((err) => {
-            console.error(`Compilation job ${jobId} failed with system error:`, err);
-        });
         return c.json({ job_id: jobId });
     }
     catch (err) {
         console.error('Error spawning compilation job:', err);
         return c.json({ error: 'Database error', details: err.message }, 500);
-    }
-}
-// Background compile worker
-async function runCompilationBackground(projectId, jobId) {
-    try {
-        await query("UPDATE compilation_jobs SET status = $1, logs = $2 WHERE id = $3", ['running', 'Compiling LaTeX files...\n', jobId]);
-        const workspaceDir = path.join(WORKSPACES_DIR, jobId);
-        await fs.mkdir(workspaceDir, { recursive: true });
-        try {
-            const filesRes = await query('SELECT path, content FROM files WHERE project_id = $1', [projectId]);
-            const files = filesRes.rows;
-            const mainFile = files.find((f) => f.path === 'main.tex');
-            if (!mainFile) {
-                throw new Error("main.tex not found in project. A 'main.tex' file is required for compilation.");
-            }
-            // Write all project files to workspace
-            for (const f of files) {
-                const fullPath = path.join(workspaceDir, f.path);
-                await fs.mkdir(path.dirname(fullPath), { recursive: true });
-                await fs.writeFile(fullPath, f.content || '');
-            }
-            const absoluteWorkspacePath = path.resolve(workspaceDir);
-            // Call LaTeX compiler inside Docker container
-            const dockerCmd = `docker run --rm -v "${absoluteWorkspacePath}":/workspace -w /workspace glyph-compiler /usr/local/bin/worker.sh main.tex`;
-            let logs = '';
-            let status = 'success';
-            try {
-                const { stdout, stderr } = await execAsync(dockerCmd);
-                logs = stdout + '\n' + stderr;
-            }
-            catch (execErr) {
-                logs = (execErr.stdout || '') + '\n' + (execErr.stderr || '') + '\n' + (execErr.message || '');
-                status = 'failed';
-            }
-            if (status === 'success') {
-                const compiledPdf = path.join(workspaceDir, 'main.pdf');
-                if (existsSync(compiledPdf)) {
-                    const pdfBytes = await fs.readFile(compiledPdf);
-                    await query(`UPDATE compilation_jobs 
-             SET status = $1, logs = $2, pdf_data = $3, pdf_url = $4, completed_at = CURRENT_TIMESTAMP 
-             WHERE id = $5`, ['success', logs, pdfBytes, `/projects/${projectId}/jobs/${jobId}/pdf`, jobId]);
-                }
-                else {
-                    await query(`UPDATE compilation_jobs 
-             SET status = $1, logs = $2, completed_at = CURRENT_TIMESTAMP 
-             WHERE id = $3`, ['failed', logs + '\nError: main.pdf was not produced by latexmk.', jobId]);
-                }
-            }
-            else {
-                await query(`UPDATE compilation_jobs 
-           SET status = $1, logs = $2, completed_at = CURRENT_TIMESTAMP 
-           WHERE id = $3`, ['failed', logs, jobId]);
-            }
-        }
-        catch (err) {
-            await query(`UPDATE compilation_jobs 
-         SET status = $1, logs = $2, completed_at = CURRENT_TIMESTAMP 
-         WHERE id = $3`, ['failed', `System Error: ${err.message || err}`, jobId]);
-        }
-        finally {
-            // Clean up workspace
-            try {
-                await fs.rm(workspaceDir, { recursive: true, force: true });
-            }
-            catch (cleanupErr) {
-                console.error(`Failed to clean up workspace ${workspaceDir}:`, cleanupErr);
-            }
-        }
-    }
-    catch (dbErr) {
-        console.error(`Fatal database logging error for job ${jobId}:`, dbErr);
     }
 }
 // GET /projects/:projectId/jobs/:jobId
