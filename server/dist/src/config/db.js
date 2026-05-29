@@ -56,6 +56,8 @@ export async function initializeDatabase() {
         UNIQUE(project_id, path)
       )
     `);
+        // Ensure yjs_state column exists for persistence
+        await client.query('ALTER TABLE files ADD COLUMN IF NOT EXISTS yjs_state BYTEA');
         // 3. Compilation Jobs Table
         // Added pdf_data BYTEA to store the compiled PDF directly in the database
         await client.query(`
