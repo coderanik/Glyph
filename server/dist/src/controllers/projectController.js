@@ -34,7 +34,7 @@ async function checkProjectAccess(projectId, userId) {
 // GET /projects
 export async function getProjects(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     try {
@@ -86,7 +86,7 @@ export async function getProjects(c) {
 // POST /projects
 export async function createProject(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     try {
@@ -103,7 +103,7 @@ export async function createProject(c) {
 // GET /projects/:projectId/files
 export async function getFiles(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -125,7 +125,7 @@ export async function getFiles(c) {
 // POST /projects/:projectId/files
 export async function createFile(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -160,7 +160,7 @@ export async function createFile(c) {
 // POST /projects/:projectId/compile
 export async function compileProject(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -259,7 +259,7 @@ async function runCompilationBackground(projectId, jobId) {
 // GET /projects/:projectId/jobs/:jobId
 export async function getJobStatus(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -287,7 +287,7 @@ export async function getJobStatus(c) {
 // GET /projects/:projectId/jobs/:jobId/pdf
 export async function getJobPdf(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -318,7 +318,7 @@ export async function getJobPdf(c) {
 // POST /projects/:projectId/share
 export async function createShareLink(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
@@ -348,7 +348,7 @@ export async function createShareLink(c) {
 // POST /projects/share/accept
 export async function acceptShareLink(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     try {
@@ -381,7 +381,7 @@ export async function acceptShareLink(c) {
 // GET /projects/:projectId/collaborators
 export async function getProjectCollaborators(c) {
     const auth = getAuth(c);
-    const userId = auth?.userId || c.req.header('X-Mock-User');
+    const userId = auth?.userId;
     if (!userId)
         return c.json({ error: 'Unauthorized' }, 401);
     const projectId = c.req.param('projectId');
