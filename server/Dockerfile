@@ -34,4 +34,4 @@ WORKDIR /app/server
 
 EXPOSE 8083
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

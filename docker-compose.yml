@@ -17,6 +17,8 @@ services:
       dockerfile: server/Dockerfile
     ports:
       - "${PORT:-8083}:${PORT:-8083}"
+    env_file:
+      - server/.env
     environment:
       - DATABASE_URL=postgresql://glyph:glyph_password@db:5432/glyph
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}

@@ -38,4 +38,4 @@ RUN npm ci --workspace=server --omit=dev
 
 WORKDIR /app/server
 
-CMD ["node", "dist/compileWorker.js"]
+CMD ["node", "dist/src/compileWorker.js"]
