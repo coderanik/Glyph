@@ -2,6 +2,17 @@ import { getAuth } from '@hono/clerk-auth';
 import { query } from '../config/db.js';
 import crypto from 'crypto';
 import { forceSaveRoom } from '../config/yjsServer.js';
+import path from 'path';
+function isSafeFilePath(filePath) {
+    if (!filePath)
+        return false;
+    // Normalize path using path.posix since the server/workers run in Linux Docker containers
+    const normalized = path.posix.normalize(filePath);
+    if (path.posix.isAbsolute(normalized) || normalized.startsWith('..') || normalized.includes('..')) {
+        return false;
+    }
+    return true;
+}
 async function checkProjectAccess(projectId, userId) {
     try {
         // Check if owner
@@ -134,6 +145,9 @@ export async function createFile(c) {
         const content = body.content || '';
         if (!name) {
             return c.json({ error: 'File name is required' }, 400);
+        }
+        if (!isSafeFilePath(filePath)) {
+            return c.json({ error: 'Forbidden: Invalid or traversal file path' }, 400);
         }
         // Upsert the file content
         const result = await query(`INSERT INTO files (project_id, name, path, content, updated_at)

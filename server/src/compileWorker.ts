@@ -9,6 +9,15 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const WORKSPACES_DIR = path.resolve('/tmp/workspaces');
 
+function isSafeFilePath(filePath: string): boolean {
+  if (!filePath) return false;
+  const normalized = path.posix.normalize(filePath);
+  if (path.posix.isAbsolute(normalized) || normalized.startsWith('..') || normalized.includes('..')) {
+    return false;
+  }
+  return true;
+}
+
 async function compileJob(jobId: string, projectId: string) {
   console.log(`[Worker] Starting compilation for job ${jobId}, project ${projectId}`);
   const workspaceDir = path.join(WORKSPACES_DIR, jobId);
@@ -26,6 +35,9 @@ async function compileJob(jobId: string, projectId: string) {
 
     // Write all project files to workspace
     for (const f of files) {
+      if (!isSafeFilePath(f.path)) {
+        throw new Error(`Insecure file path traversal detected: ${f.path}`);
+      }
       const fullPath = path.join(workspaceDir, f.path);
       await fs.mkdir(path.dirname(fullPath), { recursive: true });
       await fs.writeFile(fullPath, f.content || '');

@@ -3,6 +3,18 @@ import { getAuth } from '@hono/clerk-auth';
 import { query } from '../config/db.js';
 import crypto from 'crypto';
 import { forceSaveRoom } from '../config/yjsServer.js';
+import path from 'path';
+
+function isSafeFilePath(filePath: string): boolean {
+  if (!filePath) return false;
+  // Normalize path using path.posix since the server/workers run in Linux Docker containers
+  const normalized = path.posix.normalize(filePath);
+  
+  if (path.posix.isAbsolute(normalized) || normalized.startsWith('..') || normalized.includes('..')) {
+    return false;
+  }
+  return true;
+}
 
 async function checkProjectAccess(projectId: string, userId: string): Promise<'write' | 'read' | null> {
   try {
@@ -152,6 +164,10 @@ export async function createFile(c: Context) {
 
     if (!name) {
       return c.json({ error: 'File name is required' }, 400);
+    }
+
+    if (!isSafeFilePath(filePath)) {
+      return c.json({ error: 'Forbidden: Invalid or traversal file path' }, 400);
     }
 
     // Upsert the file content
