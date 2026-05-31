@@ -43,8 +43,28 @@ async function compileJob(jobId: string, projectId: string) {
       await fs.writeFile(fullPath, f.content || '');
     }
 
-    // Run latexmk directly in the container
-    const cmd = `latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex`;
+    // Check if latexmk is installed locally on the host/container
+    let useDocker = false;
+    try {
+      await execAsync('which latexmk');
+    } catch {
+      useDocker = true;
+    }
+
+    let cmd = `latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex`;
+    if (useDocker) {
+      let canonicalWorkspaceDir = workspaceDir;
+      try {
+        canonicalWorkspaceDir = await fs.realpath(workspaceDir);
+      } catch (e) {
+        // ignore
+      }
+      console.log(`[Worker] 'latexmk' not found locally. Compiling inside Docker container 'glyph-compiler'...`);
+      cmd = `docker run --rm -v "${canonicalWorkspaceDir}":/workspace glyph-compiler /usr/local/bin/worker.sh main.tex`;
+    } else {
+      console.log(`[Worker] 'latexmk' found in path. Compiling directly...`);
+    }
+
     let logs = '';
     let status = 'success';
 

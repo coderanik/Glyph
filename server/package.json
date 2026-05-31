@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "worker": "tsx watch src/compileWorker.ts",
     "build": "tsc",
     "start": "node dist/src/index.js"
   },

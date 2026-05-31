@@ -112,13 +112,16 @@ export async function getJob(
 export async function waitForCompile(
   projectId: string,
   jobId: string,
-  token: string,
+  getTokenFn: () => Promise<string | null>,
   opts?: { intervalMs?: number; maxAttempts?: number }
 ): Promise<JobStatus> {
   const interval = opts?.intervalMs ?? 400;
   const max = opts?.maxAttempts ?? 300;
   for (let i = 0; i < max; i++) {
-    const j = await getJob(projectId, jobId, token);
+    // Refresh token each iteration — Clerk JWTs are short-lived (~60s)
+    const freshToken = await getTokenFn();
+    if (!freshToken) throw new Error("Session expired — sign in again.");
+    const j = await getJob(projectId, jobId, freshToken);
     if (j.status === "success" || j.status === "failed") {
       return j;
     }

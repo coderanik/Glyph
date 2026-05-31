@@ -10,6 +10,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glyph -d glyph"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   backend:
     build:
@@ -18,8 +23,10 @@ services:
     ports:
       - "${PORT:-8083}:${PORT:-8083}"
     env_file:
-      - server/.env
+      - path: server/.env
+        required: false
     environment:
+      # Override DATABASE_URL to point to the Docker Postgres container
       - DATABASE_URL=postgresql://glyph:glyph_password@db:5432/glyph
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
@@ -27,7 +34,8 @@ services:
       - PORT=${PORT:-8083}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   compile-worker:
     build:
@@ -36,7 +44,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://glyph:glyph_password@db:5432/glyph
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

@@ -30,7 +30,11 @@ docker build -t glyph-compiler ./docker
 echo "⚙️  Starting Hono backend (port 8083)..."
 (cd server && npm run dev) &
 
-# Give the server a moment to boot before starting the frontend
+# ── Start the LaTeX Compile Worker ─────────────────────────────
+echo "🤖 Starting LaTeX compile worker..."
+(cd server && npm run worker) &
+
+# Give the servers a moment to boot before starting the frontend
 sleep 2
 
 # ── Start the Next.js frontend ─────────────────────────────────
