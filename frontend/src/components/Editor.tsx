@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
+import { openSearchPanel } from "@codemirror/search";
 import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
 import { WebsocketProvider } from "y-websocket";
@@ -10,12 +12,16 @@ import { WS_BASE } from "@/lib/api";
 
 export default function Editor({
   fileId,
+  initialContent = "",
   onChange,
   readOnly = false,
+  editorViewRef,
 }: {
   fileId: string;
+  initialContent?: string;
   onChange?: (text: string) => void;
   readOnly?: boolean;
+  editorViewRef?: React.RefObject<EditorView | null>;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -56,10 +62,18 @@ export default function Editor({
       }
     });
 
+    const collabCompartment = new Compartment();
+
     // Basic Editor View Setup
     const extensions = [
       basicSetup,
-      yCollab(ytext, provider.awareness)
+      collabCompartment.of([]), // Start without collaboration extension until synced
+      keymap.of([
+        {
+          key: "Alt-f",
+          run: openSearchPanel,
+        },
+      ]),
     ];
 
     if (readOnly) {
@@ -68,7 +82,7 @@ export default function Editor({
     }
 
     const state = EditorState.create({
-      doc: ytext.toString(),
+      doc: initialContent || ytext.toString(),
       extensions
     });
 
@@ -77,11 +91,23 @@ export default function Editor({
       parent: editorRef.current,
     });
     viewRef.current = view;
+    if (editorViewRef) {
+      editorViewRef.current = view;
+    }
 
     // Initial content notify
     if (onChangeRef.current) {
-      onChangeRef.current(ytext.toString());
+      onChangeRef.current(initialContent || ytext.toString());
     }
+
+    provider.on("sync", (isSynced: boolean) => {
+      if (isSynced && !cancelled) {
+        console.log("🔗 Yjs Synced: Attaching collaboration extension to Editor");
+        view.dispatch({
+          effects: collabCompartment.reconfigure(yCollab(ytext, provider.awareness))
+        });
+      }
+    });
 
     const connectId = window.setTimeout(() => {
       if (!cancelled) {
@@ -93,9 +119,12 @@ export default function Editor({
       cancelled = true;
       window.clearTimeout(connectId);
       view.destroy();
+      if (editorViewRef) {
+        editorViewRef.current = null;
+      }
       provider.destroy();
     };
-  }, [fileId, readOnly]);
+  }, [fileId, initialContent, readOnly]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }
