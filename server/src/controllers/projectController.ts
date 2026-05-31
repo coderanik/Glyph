@@ -445,3 +445,82 @@ export async function getProjectCollaborators(c: Context) {
     return c.json({ error: 'Database error', details: err.message }, 500);
   }
 }
+
+// POST /projects/:projectId/ai
+export async function aiQuery(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const projectId = c.req.param('projectId');
+  if (!projectId) return c.json({ error: 'Project ID is required' }, 400);
+  const role = await checkProjectAccess(projectId, userId as string);
+  if (!role) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { prompt, fileContent, selectedText } = await c.req.json();
+    if (!prompt || typeof prompt !== 'string') {
+      return c.json({ error: 'Prompt is required' }, 400);
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return c.json({
+        text: "⚠️ **Gemini API Key is missing!**\n\nPlease set the `GEMINI_API_KEY` environment variable in your `server/.env` file and restart the development stack."
+      });
+    }
+
+    const systemPrompt = `You are an expert LaTeX assistant. You have access to the current LaTeX code in the user's editor.
+Your task is to help the user write, format, fix, or modify their LaTeX document.
+
+Here is the content of the current active LaTeX file:
+--- START FILE CONTENT ---
+${fileContent || "(The file is currently empty)"}
+--- END FILE CONTENT ---
+${selectedText ? `\nHere is the user's currently selected text in the editor:\n--- START SELECTED TEXT ---\n${selectedText}\n--- END SELECTED TEXT ---\n` : ""}
+
+When responding:
+1. If the user asks for changes, edits, or fixes, output the corrected/new LaTeX block in a markdown code block starting with \`\`\`latex.
+2. Write a clear, brief explanation of what you changed or how you fixed the issue.
+3. Be precise. If the change only affects a small section, you can output just that section, but if the user asks you to rewrite or fix the whole file, you can output the entire file content. Indicate clearly in your text description whether the output code block is a complete replacement for the entire file or just a specific snippet/selection.
+
+User Query: ${prompt}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: systemPrompt }]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', errorText);
+      return c.json({
+        text: `⚠️ **Gemini API Error:** Failed to fetch from Gemini. Response status: ${response.status}. Details: ${errorText}`
+      });
+    }
+
+    const data = await response.json() as any;
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!aiText) {
+      return c.json({
+        text: "⚠️ **No response received from Gemini.** Please check your API key and network connection."
+      });
+    }
+
+    return c.json({ text: aiText });
+  } catch (err: any) {
+    console.error('Error in aiQuery:', err);
+    return c.json({ error: 'AI server error', details: err.message }, 500);
+  }
+}

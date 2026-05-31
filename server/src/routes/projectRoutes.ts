@@ -10,6 +10,7 @@ import {
   createShareLink,
   acceptShareLink,
   getProjectCollaborators,
+  aiQuery,
 } from '../controllers/projectController.js';
 
 const projectRoutes = new Hono();
@@ -24,5 +25,6 @@ projectRoutes.get('/:projectId/jobs/:jobId', getJobStatus);
 projectRoutes.get('/:projectId/jobs/:jobId/pdf', getJobPdf);
 projectRoutes.post('/:projectId/share', createShareLink);
 projectRoutes.get('/:projectId/collaborators', getProjectCollaborators);
+projectRoutes.post('/:projectId/ai', aiQuery);
 
 export default projectRoutes;

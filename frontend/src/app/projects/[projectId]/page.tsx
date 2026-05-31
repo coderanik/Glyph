@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
+import { EditorView } from "codemirror";
 import Titlebar from "@/components/Titlebar";
 import ActivityBar from "@/components/ActivityBar";
 import SidebarNew from "@/components/SidebarNew";
@@ -56,7 +57,7 @@ export default function ProjectEditorPage({
   const [editorCode, setEditorCode] = useState<string>("");
 
   // Collaborative files, users, and modal control states
-  const [projectFiles, setProjectFiles] = useState<{ id: string; name: string; path: string }[]>([]);
+  const [projectFiles, setProjectFiles] = useState<{ id: string; name: string; path: string; content?: string }[]>([]);
   const [collaborators, setCollaborators] = useState<{ id: string; name: string; initials: string; color: string; online: boolean }[]>([]);
   const [userRole, setUserRole] = useState<"write" | "read">("write");
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -65,6 +66,42 @@ export default function ProjectEditorPage({
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedContent = useRef<string>("");
+
+  const editorViewRef = useRef<EditorView | null>(null);
+
+  const handleInsertText = (text: string) => {
+    const view = editorViewRef.current;
+    if (view) {
+      const { from, to } = view.state.selection.main;
+      view.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+      });
+      view.focus();
+    }
+  };
+
+  const getEditorContext = () => {
+    const view = editorViewRef.current;
+    if (view) {
+      const fileContent = view.state.doc.toString();
+      const { from, to } = view.state.selection.main;
+      const selectedText = from !== to ? view.state.sliceDoc(from, to) : "";
+      return { fileContent, selectedText };
+    }
+    return { fileContent: "", selectedText: "" };
+  };
+
+  const handleReplaceDocument = (text: string) => {
+    const view = editorViewRef.current;
+    if (view) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: text },
+        selection: { anchor: text.length },
+      });
+      view.focus();
+    }
+  };
 
   // Reset editorCode on fileId change to prevent content flash from previous file
   useEffect(() => {
@@ -205,7 +242,7 @@ export default function ProjectEditorPage({
         const jobId = await startCompile(projectId, token);
         setCompileStatus("Compiling on server...");
 
-        const job = await waitForCompile(projectId, jobId, token);
+        const job = await waitForCompile(projectId, jobId, getToken);
         if (job.status === "success") {
           setCompileStatus("Success");
           // Use absolute API URL to load PDF in iframe
@@ -366,6 +403,7 @@ export default function ProjectEditorPage({
           isOpen={sidebarOpen}
           activeTab={sidebarTab}
           onTabChange={setSidebarTab}
+          activeActivityItem={activeActivityItem}
           projectName={projectName}
           files={projectFiles}
           activeFileId={fileId}
@@ -373,6 +411,10 @@ export default function ProjectEditorPage({
           onFileCreate={handleFileCreate}
           collaborators={collaborators}
           readOnly={userRole === "read"}
+          onInsertText={handleInsertText}
+          onGetEditorContext={getEditorContext}
+          onReplaceDocument={handleReplaceDocument}
+          projectId={projectId}
         />
 
         {/* Center Split Screen: Editor and PDF Viewer */}
@@ -384,8 +426,10 @@ export default function ProjectEditorPage({
               {fileId && (
                 <Editor
                   fileId={fileId}
+                  initialContent={activeFile?.content || ""}
                   onChange={handleEditorChange}
                   readOnly={userRole === "read"}
+                  editorViewRef={editorViewRef}
                 />
               )}
             </div>
