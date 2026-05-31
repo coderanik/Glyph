@@ -7,6 +7,7 @@ import {
   History,
   Settings,
   PanelLeft,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -22,6 +23,7 @@ const items = [
   { icon: Search, label: "Search" },
   { icon: Users, label: "Collaborators" },
   { icon: History, label: "History" },
+  { icon: Sparkles, label: "AI Assistant" },
 ];
 
 export default function ActivityBar({
