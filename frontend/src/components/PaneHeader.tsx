@@ -1,17 +1,13 @@
 "use client";
 
-import { WrapText, Focus, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 type PaneHeaderProps = {
   title: string;
   subtitle?: string;
   type: "editor" | "preview";
-  compileStatus?: string;
-  previewMode?: "pdf" | "live";
-  onWrapToggle?: () => void;
-  onFocusToggle?: () => void;
+  compileStatus?: string | null;
   onDownload?: () => void;
-  onFullscreen?: () => void;
 };
 
 export default function PaneHeader({
@@ -19,7 +15,6 @@ export default function PaneHeader({
   subtitle,
   type,
   compileStatus,
-  previewMode,
   onDownload,
 }: PaneHeaderProps) {
   return (
@@ -30,29 +25,11 @@ export default function PaneHeader({
       {subtitle && (
         <span className="text-[10px] text-text-tertiary">{subtitle}</span>
       )}
-      {type === "preview" && previewMode === "pdf" && compileStatus && (
+      {type === "preview" && compileStatus && (
         <span className="text-[10px] text-text-tertiary ml-2">{compileStatus}</span>
       )}
 
-      {/* Removed Live HTML toggle switcher */}
-
       <div className="ml-auto flex items-center gap-1">
-        {type === "editor" && (
-          <>
-            <button
-              className="w-5 h-5 rounded flex items-center justify-center text-text-secondary hover:bg-bg-primary hover:text-text-primary transition-colors"
-              title="Wrap lines"
-            >
-              <WrapText size={12} />
-            </button>
-            <button
-              className="w-5 h-5 rounded flex items-center justify-center text-text-secondary hover:bg-bg-primary hover:text-text-primary transition-colors"
-              title="Focus mode"
-            >
-              <Focus size={12} />
-            </button>
-          </>
-        )}
         {type === "preview" && (
           <button
             onClick={onDownload}

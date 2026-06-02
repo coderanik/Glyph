@@ -6,7 +6,7 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import { EditorView } from "codemirror";
 import Titlebar from "@/components/Titlebar";
 import ActivityBar from "@/components/ActivityBar";
-import SidebarNew from "@/components/SidebarNew";
+import Sidebar from "@/components/Sidebar";
 import PaneHeader from "@/components/PaneHeader";
 import Editor from "@/components/Editor";
 import PdfViewer from "@/components/PdfViewer";
@@ -53,9 +53,6 @@ export default function ProjectEditorPage({
   const [connected] = useState(true);
   const [wordCount, setWordCount] = useState(0);
 
-  // Editor code content & preview mode
-  const [editorCode, setEditorCode] = useState<string>("");
-
   // Collaborative files, users, and modal control states
   const [projectFiles, setProjectFiles] = useState<{ id: string; name: string; path: string; content?: string }[]>([]);
   const [collaborators, setCollaborators] = useState<{ id: string; name: string; initials: string; color: string; online: boolean }[]>([]);
@@ -64,7 +61,6 @@ export default function ProjectEditorPage({
 
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedContent = useRef<string>("");
 
   const editorViewRef = useRef<EditorView | null>(null);
@@ -103,10 +99,9 @@ export default function ProjectEditorPage({
     }
   };
 
-  // Reset editorCode on fileId change to prevent content flash from previous file
+  // Reset autoSaveStatus on fileId change
   useEffect(() => {
     const t = setTimeout(() => {
-      setEditorCode("");
       setAutoSaveStatus("idle");
     }, 0);
     lastSavedContent.current = "";
@@ -217,7 +212,9 @@ export default function ProjectEditorPage({
             const collabList = await collabRes.json();
             setCollaborators(collabList);
           }
-        } catch {}
+        } catch (err) {
+          console.error("Failed to reload collaborators list:", err);
+        }
       }
       reloadCollabs();
     }, 10000);
@@ -296,8 +293,6 @@ export default function ProjectEditorPage({
   };
 
   const handleEditorChange = (code: string) => {
-    setEditorCode(code);
-    
     // Cache the updated text in the files list state to prevent content loss on tab switch
     setProjectFiles((prev) =>
       prev.map((f) => (f.id === fileId ? { ...f, content: code } : f))
@@ -399,7 +394,8 @@ export default function ProjectEditorPage({
         />
 
         {/* Dynamic Sidebar panels */}
-        <SidebarNew
+        <Sidebar
+          isEditor={true}
           isOpen={sidebarOpen}
           activeTab={sidebarTab}
           onTabChange={setSidebarTab}

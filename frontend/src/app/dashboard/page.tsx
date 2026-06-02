@@ -221,7 +221,6 @@ export default function DashboardPage() {
     ownerName?: string;
     ownerFirstName?: string;
     createdAt: string;
-    [key: string]: unknown;
   };
   const [projectsList, setProjectsList] = useState<ProjectData[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
