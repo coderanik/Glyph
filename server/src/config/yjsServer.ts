@@ -1,10 +1,7 @@
 import { WebSocket } from 'ws';
 import * as Y from 'yjs';
-// @ts-ignore
 import * as sync from 'y-protocols/sync';
-// @ts-ignore
 import * as encoding from 'lib0/encoding';
-// @ts-ignore
 import * as decoding from 'lib0/decoding';
 import { query } from './db.js';
 
@@ -103,7 +100,7 @@ export async function setupWSConnection(conn: WebSocket, roomName: string) {
   conn.send(encoding.toUint8Array(encoder));
 
   // 4. Listen to local document updates and broadcast to other clients in the room
-  const onUpdate = (update: Uint8Array, origin: any) => {
+  const onUpdate = (update: Uint8Array, origin: unknown) => {
     if (origin !== conn) {
       const encoder = encoding.createEncoder();
       encoding.writeVarUint(encoder, 0); // messageSync = 0

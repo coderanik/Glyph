@@ -9,6 +9,11 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const WORKSPACES_DIR = path.resolve('/tmp/workspaces');
 
+interface ProjectFile {
+  path: string;
+  content: string;
+}
+
 function isSafeFilePath(filePath: string): boolean {
   if (!filePath) return false;
   const normalized = path.posix.normalize(filePath);
@@ -18,7 +23,7 @@ function isSafeFilePath(filePath: string): boolean {
   return true;
 }
 
-async function compileJob(jobId: string, projectId: string) {
+export async function compileJob(jobId: string, projectId: string) {
   console.log(`[Worker] Starting compilation for job ${jobId}, project ${projectId}`);
   const workspaceDir = path.join(WORKSPACES_DIR, jobId);
   await fs.mkdir(workspaceDir, { recursive: true });
@@ -26,8 +31,8 @@ async function compileJob(jobId: string, projectId: string) {
   try {
     // Fetch files from the DB
     const filesRes = await query('SELECT path, content FROM files WHERE project_id = $1', [projectId]);
-    const files = filesRes.rows;
-    const mainFile = files.find((f: any) => f.path === 'main.tex');
+    const files = filesRes.rows as ProjectFile[];
+    const mainFile = files.find((f) => f.path === 'main.tex');
 
     if (!mainFile) {
       throw new Error("main.tex not found in project. A 'main.tex' file is required for compilation.");
@@ -47,17 +52,17 @@ async function compileJob(jobId: string, projectId: string) {
     let useDocker = false;
     try {
       await execAsync('which latexmk');
-    } catch {
+    } catch (err) {
       useDocker = true;
     }
 
-    let cmd = `latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex`;
+    let cmd = `latexmk -pdf -interaction=nonstopmode main.tex`;
     if (useDocker) {
       let canonicalWorkspaceDir = workspaceDir;
       try {
         canonicalWorkspaceDir = await fs.realpath(workspaceDir);
-      } catch (e) {
-        // ignore
+      } catch (err) {
+        console.error(`[Worker] Failed to resolve canonical path for ${workspaceDir}:`, err);
       }
       console.log(`[Worker] 'latexmk' not found locally. Compiling inside Docker container 'glyph-compiler'...`);
       cmd = `docker run --rm -v "${canonicalWorkspaceDir}":/workspace glyph-compiler /usr/local/bin/worker.sh main.tex`;
@@ -71,8 +76,9 @@ async function compileJob(jobId: string, projectId: string) {
     try {
       const { stdout, stderr } = await execAsync(cmd, { cwd: workspaceDir });
       logs = stdout + '\n' + stderr;
-    } catch (execErr: any) {
-      logs = (execErr.stdout || '') + '\n' + (execErr.stderr || '') + '\n' + (execErr.message || '');
+    } catch (execErr) {
+      const errObj = execErr as { stdout?: string; stderr?: string; message?: string };
+      logs = (errObj.stdout || '') + '\n' + (errObj.stderr || '') + '\n' + (errObj.message || '');
       status = 'failed';
     }
 
@@ -105,14 +111,15 @@ async function compileJob(jobId: string, projectId: string) {
       );
       console.log(`[Worker] Job ${jobId} failed to compile.`);
     }
-  } catch (err: any) {
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
     console.error(`[Worker] Error compiling job ${jobId}:`, err);
     try {
       await query(
         `UPDATE compilation_jobs 
          SET status = $1, logs = $2, completed_at = CURRENT_TIMESTAMP 
          WHERE id = $3`,
-        ['failed', `System Error: ${err.message || err}`, jobId]
+        ['failed', `System Error: ${errorMessage}`, jobId]
       );
     } catch (dbErr) {
       console.error(`[Worker] Fatal db error updating job ${jobId}:`, dbErr);
@@ -127,7 +134,7 @@ async function compileJob(jobId: string, projectId: string) {
   }
 }
 
-async function pollQueue() {
+export async function pollQueue() {
   try {
     // Claim the job using UPDATE with SELECT FOR UPDATE SKIP LOCKED
     const result = await query(`
@@ -156,8 +163,17 @@ async function pollQueue() {
 }
 
 async function startWorker() {
-  console.log('🤖 Compile worker sidecar started, polling queue...');
+  console.log('🤖 Compile worker sidecar started, testing database connection...');
   
+  // Verify database connectivity on startup
+  try {
+    await query('SELECT 1');
+    console.log('✅ Compile worker successfully connected to PostgreSQL.');
+  } catch (dbErr) {
+    console.error('Fatal: Compile worker failed to connect to database:', dbErr);
+    process.exit(1);
+  }
+
   // Ensure workspace parent directory exists
   await fs.mkdir(WORKSPACES_DIR, { recursive: true }).catch(() => {});
 
@@ -170,4 +186,6 @@ async function startWorker() {
   }
 }
 
-startWorker();
+if (process.env.NODE_ENV !== 'test') {
+  startWorker();
+}

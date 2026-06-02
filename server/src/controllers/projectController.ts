@@ -5,6 +5,37 @@ import crypto from 'crypto';
 import { forceSaveRoom } from '../config/yjsServer.js';
 import path from 'path';
 
+interface Project {
+  id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+  role: string;
+  ownerName?: string;
+  ownerFirstName?: string;
+}
+
+interface Collaborator {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  email: string | null;
+  role: 'owner' | 'collaborator';
+  permission: 'write' | 'read';
+  online: boolean;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
 function isSafeFilePath(filePath: string): boolean {
   if (!filePath) return false;
   // Normalize path using path.posix since the server/workers run in Linux Docker containers
@@ -57,7 +88,7 @@ export async function getProjects(c: Context) {
     );
 
     const clerkClient = c.get('clerk');
-    const projects: any[] = [];
+    const projects: Project[] = [];
     const ownerCache = new Map<string, { ownerName: string; ownerFirstName: string }>();
 
     for (const row of result.rows) {
@@ -88,9 +119,9 @@ export async function getProjects(c: Context) {
     }
 
     return c.json(projects);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching projects:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -110,9 +141,9 @@ export async function createProject(c: Context) {
     );
     
     return c.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error creating project:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -135,9 +166,9 @@ export async function getFiles(c: Context) {
       [projectId]
     );
     return c.json(result.rows);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching files:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -181,9 +212,9 @@ export async function createFile(c: Context) {
     );
 
     return c.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error saving file:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -216,9 +247,9 @@ export async function compileProject(c: Context) {
     const jobId = result.rows[0].id;
 
     return c.json({ job_id: jobId });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error spawning compilation job:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -249,9 +280,9 @@ export async function getJobStatus(c: Context) {
     }
 
     return c.json(result.rows[0]);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching job status:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -282,7 +313,7 @@ export async function getJobPdf(c: Context) {
     c.header('Content-Type', 'application/pdf');
     c.header('Content-Disposition', `inline; filename="${jobId}.pdf"`);
     return c.body(pdfBytes);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error downloading PDF:', err);
     return c.text('Internal Server Error', 500);
   }
@@ -318,9 +349,9 @@ export async function createShareLink(c: Context) {
     );
 
     return c.json({ token, permission });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error creating share link:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -361,9 +392,9 @@ export async function acceptShareLink(c: Context) {
     );
 
     return c.json({ projectId });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error accepting share link:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -393,7 +424,7 @@ export async function getProjectCollaborators(c: Context) {
     );
 
     const clerkClient = c.get('clerk');
-    const collaboratorsList: any[] = [];
+    const collaboratorsList: Collaborator[] = [];
 
     // Helper function to fetch clerk user details safely
     const fetchUser = async (uid: string) => {
@@ -434,15 +465,15 @@ export async function getProjectCollaborators(c: Context) {
       collaboratorsList.push({
         ...userDetails,
         role: 'collaborator',
-        permission: collab.permission,
+        permission: collab.permission as 'write' | 'read',
         online: false,
       });
     }
 
     return c.json(collaboratorsList);
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error fetching collaborators:', err);
-    return c.json({ error: 'Database error', details: err.message }, 500);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
 
@@ -451,42 +482,43 @@ export async function aiQuery(c: Context) {
   const auth = getAuth(c);
   const userId = auth?.userId;
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
-
+ 
   const projectId = c.req.param('projectId');
   if (!projectId) return c.json({ error: 'Project ID is required' }, 400);
-  const role = await checkProjectAccess(projectId, userId as string);
+  const role = await checkProjectAccess(projectId, userId);
   if (!role) return c.json({ error: 'Unauthorized' }, 401);
-
+ 
   try {
     const { prompt, fileContent, selectedText } = await c.req.json();
     if (!prompt || typeof prompt !== 'string') {
       return c.json({ error: 'Prompt is required' }, 400);
     }
-
+ 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return c.json({
         text: "⚠️ **Gemini API Key is missing!**\n\nPlease set the `GEMINI_API_KEY` environment variable in your `server/.env` file and restart the development stack."
       });
     }
-
+ 
     const systemPrompt = `You are an expert LaTeX assistant. You have access to the current LaTeX code in the user's editor.
 Your task is to help the user write, format, fix, or modify their LaTeX document.
-
+ 
 Here is the content of the current active LaTeX file:
 --- START FILE CONTENT ---
 ${fileContent || "(The file is currently empty)"}
 --- END FILE CONTENT ---
 ${selectedText ? `\nHere is the user's currently selected text in the editor:\n--- START SELECTED TEXT ---\n${selectedText}\n--- END SELECTED TEXT ---\n` : ""}
-
+ 
 When responding:
 1. If the user asks for changes, edits, or fixes, output the corrected/new LaTeX block in a markdown code block starting with \`\`\`latex.
 2. Write a clear, brief explanation of what you changed or how you fixed the issue.
 3. Be precise. If the change only affects a small section, you can output just that section, but if the user asks you to rewrite or fix the whole file, you can output the entire file content. Indicate clearly in your text description whether the output code block is a complete replacement for the entire file or just a specific snippet/selection.
-
+ 
 User Query: ${prompt}`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+ 
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -510,7 +542,7 @@ User Query: ${prompt}`;
       });
     }
 
-    const data = await response.json() as any;
+    const data = await response.json() as GeminiResponse;
     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!aiText) {
       return c.json({
@@ -519,8 +551,8 @@ User Query: ${prompt}`;
     }
 
     return c.json({ text: aiText });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error in aiQuery:', err);
-    return c.json({ error: 'AI server error', details: err.message }, 500);
+    return c.json({ error: 'AI server error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }

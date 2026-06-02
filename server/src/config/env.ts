@@ -1,6 +1,7 @@
 // Load environment variables from .env file before any other modules are imported.
 // In Docker, environment variables are injected by docker-compose, so the .env file
 // may not exist — that's fine, we just skip loading it.
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -18,12 +19,30 @@ const candidates = [
 let loaded = false;
 for (const envPath of candidates) {
   try {
-    process.loadEnvFile(envPath);
-    console.log('✅ Loaded .env from', envPath);
-    loaded = true;
-    break;
-  } catch {
-    // File not found at this path, try next
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const lines = content.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const index = trimmed.indexOf('=');
+        if (index > 0) {
+          const key = trimmed.slice(0, index).trim();
+          let val = trimmed.slice(index + 1).trim();
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (process.env[key] === undefined) {
+            process.env[key] = val;
+          }
+        }
+      }
+      console.log('✅ Loaded .env from', envPath);
+      loaded = true;
+      break;
+    }
+  } catch (err) {
+    // File not found or read error at this path, try next
   }
 }
 
