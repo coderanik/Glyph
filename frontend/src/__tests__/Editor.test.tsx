@@ -6,15 +6,15 @@ import Editor from '../components/Editor'
 // Mock yjs
 vi.mock('yjs', () => {
   class MockText {
-    observers: Function[] = []
-    observe(cb: Function) {
+    observers: ((...args: unknown[]) => void)[] = []
+    observe(cb: (...args: unknown[]) => void) {
       this.observers.push(cb)
     }
     toString() {
       return 'mocked-yjs-content'
     }
     insert() {}
-    unobserve(cb: Function) {
+    unobserve(cb: (...args: unknown[]) => void) {
       this.observers = this.observers.filter(o => o !== cb)
     }
   }
@@ -32,7 +32,7 @@ vi.mock('yjs', () => {
 // Mock y-websocket
 vi.mock('y-websocket', () => {
   class MockWebsocketProvider {
-    on(event: string, cb: Function) {
+    on(event: string, cb: (sync: boolean) => void) {
       if (event === 'sync') {
         cb(true)
       }
