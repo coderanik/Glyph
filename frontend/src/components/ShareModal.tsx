@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { X, Copy, Check, ShieldAlert, Eye, Edit2 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 
+const MAX_COLLABORATORS = 3;
+
 type ShareModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -54,7 +56,8 @@ export default function ShareModal({
         const errText = await res.text();
         setError(errText || "Only the project owner can invite collaborators.");
       }
-    } catch {
+    } catch (err) {
+      console.error("Error generating share link:", err);
       setError("Failed to reach server. Please try again.");
     } finally {
       setLoading(false);
@@ -137,7 +140,7 @@ export default function ShareModal({
               <div className="p-2.5 bg-bg-secondary rounded-lg border border-border-secondary flex items-start gap-2">
                 <span className="text-xs">⚡</span>
                 <p className="text-[10px] text-text-secondary leading-relaxed">
-                  <strong>Free Tier limit:</strong> Live collaborative editing is supported for up to 3 active collaborators.
+                  <strong>Free Tier limit:</strong> Live collaborative editing is supported for up to {MAX_COLLABORATORS} active collaborators.
                 </p>
               </div>
 

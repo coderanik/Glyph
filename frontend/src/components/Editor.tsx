@@ -55,12 +55,14 @@ export default function Editor({
     
     const ytext = ydoc.getText("codemirror");
 
-    // Listen to changes deeply from the collaborative text instance directly
-    ytext.observe(() => {
+    const onYjsChange = () => {
       if (onChangeRef.current) {
         onChangeRef.current(ytext.toString());
       }
-    });
+    };
+
+    // Listen to changes deeply from the collaborative text instance directly
+    ytext.observe(onYjsChange);
 
     const collabCompartment = new Compartment();
 
@@ -102,7 +104,6 @@ export default function Editor({
 
     provider.on("sync", (isSynced: boolean) => {
       if (isSynced && !cancelled) {
-        console.log("🔗 Yjs Synced: Attaching collaboration extension to Editor");
         view.dispatch({
           effects: collabCompartment.reconfigure(yCollab(ytext, provider.awareness))
         });
@@ -118,13 +119,14 @@ export default function Editor({
     return () => {
       cancelled = true;
       window.clearTimeout(connectId);
+      ytext.unobserve(onYjsChange);
       view.destroy();
       if (editorViewRef) {
         editorViewRef.current = null;
       }
       provider.destroy();
     };
-  }, [fileId, initialContent, readOnly]);
+  }, [fileId, initialContent, readOnly, editorViewRef]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }

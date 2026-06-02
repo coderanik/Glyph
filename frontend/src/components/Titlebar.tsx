@@ -54,7 +54,7 @@ export default function Titlebar({
           className="flex items-center gap-1.5 px-2 py-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors cursor-pointer select-none"
           title="Go to Dashboard"
         >
-          <Home size={13} className="text-accent animate-pulse" />
+          <Home size={13} className="text-accent" />
           <span className="text-[12px] font-semibold tracking-wide font-sans">Glyph</span>
         </Link>
       </div>
@@ -71,9 +71,9 @@ export default function Titlebar({
       <div className="flex items-center gap-1.5 z-10">
         {/* Collaborator avatars */}
         <div className="flex -space-x-1.5 mr-1.5">
-          {collaborators.map((c, idx) => (
+          {collaborators.map((c) => (
             <div
-              key={idx}
+              key={c.id}
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white border border-bg-primary select-none ${
                 c.online ? "ring-[1px] ring-green-400" : ""
               }`}

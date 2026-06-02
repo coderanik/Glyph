@@ -56,7 +56,7 @@ export default function LandingPage() {
       <div className="hero">
         <div className="badge"><span className="badge-dot"></span>Now in beta — free to use</div>
         <h1>Collaborative <span>LaTeX editing</span>, reimagined</h1>
-        <p>A lightweight, real-time LaTeX editor built on Rust and Next.js. Write, compile, and collaborate — all in your browser.</p>
+        <p>A lightweight, real-time LaTeX editor built on TypeScript and Next.js. Write, compile, and collaborate — all in your browser.</p>
         <div className="hero-actions">
           <Show when="signed-out">
             <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
@@ -66,7 +66,7 @@ export default function LandingPage() {
           <Show when="signed-in">
             <Link href="/dashboard" className="btn-large btn-large-primary" style={{ textDecoration: 'none' }}>Go to Dashboard</Link>
           </Show>
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="btn-large btn-large-ghost" style={{ textDecoration: 'none' }}>View on GitHub</a>
+          <a href="https://github.com/coderanik/Glyph" target="_blank" rel="noreferrer" className="btn-large btn-large-ghost" style={{ textDecoration: 'none' }}>View on GitHub</a>
         </div>
       </div>
 
@@ -179,8 +179,8 @@ export default function LandingPage() {
             <div className="feature-icon" style={{background: '#EEEDFE'}}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v12M3 9h12" stroke="#534AB7" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </div>
-            <h3>Rust backend</h3>
-            <p>Axum + Tokio powers a fast, memory-safe API. PostgreSQL and Redis keep state in sync.</p>
+            <h3>TypeScript backend</h3>
+            <p>Hono + Node.js powers a fast, responsive API. PostgreSQL keeps collaborative state in sync.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon" style={{background: '#EAF3DE'}}>
@@ -191,7 +191,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="stack-pills">
-          <div className="pill">Rust</div><div className="pill">Axum</div><div className="pill">Tokio</div><div className="pill">Next.js 15</div><div className="pill">TypeScript</div><div className="pill">Tailwind CSS</div><div className="pill">Yjs</div><div className="pill">CodeMirror 6</div><div className="pill">PostgreSQL</div><div className="pill">Redis</div><div className="pill">Docker</div>
+          <div className="pill">Node.js</div><div className="pill">Hono</div><div className="pill">Next.js 16</div><div className="pill">TypeScript</div><div className="pill">Tailwind CSS</div><div className="pill">Yjs</div><div className="pill">CodeMirror 6</div><div className="pill">PostgreSQL</div><div className="pill">Docker</div>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export default function LandingPage() {
           <Image src="/logo.png" alt="Glyph Logo" width={20} height={20} className="rounded-[4px]" />
           Glyph
         </div>
-        <div>Built with Rust & Next.js · Open source</div>
+        <div>Built with TypeScript & Next.js · Open source</div>
         <div style={{display: 'flex', gap: '16px'}}><span>Docs</span><span>GitHub</span><span>Status</span></div>
       </footer>
     </div>

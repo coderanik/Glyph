@@ -1,7 +1,7 @@
-/** Browser talks to Next; Rust API default is :4000 (docker-compose backend port). */
+/** Browser talks to Next; Node API default is :8083 (docker-compose backend port). */
 const raw =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
-  "http://localhost:4000";
+  "http://localhost:8083";
 
 export const API_BASE = raw;
 

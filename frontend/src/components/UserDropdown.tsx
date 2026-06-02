@@ -42,16 +42,13 @@ export default function UserDropdown() {
         });
         
         if (res.ok && active) {
-          const data = await res.json();
-          console.log("Backend verified successfully via Clerk token:", data);
           setBackendVerified(true);
         } else if (active) {
-          console.error("Backend verification failed with status:", res.status);
           setBackendVerified(false);
         }
       } catch (err) {
+        console.error("Error verifying backend connection:", err);
         if (active) {
-          console.error("Failed to connect to backend for verification:", err);
           setBackendVerified(false);
         }
       }

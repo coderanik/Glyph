@@ -50,7 +50,7 @@ export default function ActivityBar({
         const isActive = activeItem === index;
         return (
           <button
-            key={index}
+            key={item.label}
             onClick={() => onItemClick(index)}
             className={`w-8 h-8 rounded-md flex items-center justify-center transition-all ${
               isActive
