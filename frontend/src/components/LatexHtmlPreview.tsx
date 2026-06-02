@@ -60,18 +60,21 @@ export default function LatexHtmlPreview({ code }: LatexHtmlPreviewProps) {
           const baseLink = doc.createElement("link");
           baseLink.rel = "stylesheet";
           baseLink.href = "https://cdn.jsdelivr.net/npm/latex.js@0.12.6/dist/css/base.css";
+          baseLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/base.css';");
           head.appendChild(baseLink);
-
+ 
           // article.css (standard paper document class layout style)
           const articleLink = doc.createElement("link");
           articleLink.rel = "stylesheet";
           articleLink.href = "https://cdn.jsdelivr.net/npm/latex.js@0.12.6/dist/css/article.css";
+          articleLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/article.css';");
           head.appendChild(articleLink);
-
+ 
           // katex.css (LaTeX math rendering formulas)
           const katexLink = doc.createElement("link");
           katexLink.rel = "stylesheet";
           katexLink.href = "https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css";
+          katexLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/katex.css';");
           head.appendChild(katexLink);
 
           // Customize style rules to match Inter sans-serif typeface and page padding
