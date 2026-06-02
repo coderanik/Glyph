@@ -90,11 +90,10 @@ Glyph/
 │   │   └── types/      # TypeScript type definitions
 │   └── public/         # Static assets
 ├── server/             # Hono backend (Node.js, TypeScript)
-│   ├── src/
-│   │   ├── config/     # Database, environment, and Yjs config
-│   │   ├── controllers/# Route handler logic
-│   │   └── routes/     # API route definitions
-│   └── prisma/         # Prisma schema and migrations
+│   └── src/
+│       ├── config/     # Database, environment, and Yjs config
+│       ├── controllers/# Route handler logic
+│       └── routes/     # API route definitions
 ├── docker/             # LaTeX compiler Docker image
 ├── scripts/            # Development utility scripts
 └── .github/            # CI workflows and issue templates

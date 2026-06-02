@@ -14,6 +14,6 @@ fi
 
 echo "Compiling $FILE_NAME with latexmk..."
 # -pdf invokes pdflatex, -interaction=nonstopmode prevents stopping on errors
-latexmk -pdf -interaction=nonstopmode -halt-on-error "$FILE_NAME"
+latexmk -pdf -interaction=nonstopmode "$FILE_NAME"
 
 echo "Compilation finished successfully."
