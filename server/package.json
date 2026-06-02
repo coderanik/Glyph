@@ -5,22 +5,26 @@
     "dev": "tsx watch src/index.ts",
     "worker": "tsx watch src/compileWorker.ts",
     "build": "tsc",
-    "start": "node dist/src/index.js"
+    "start": "node dist/src/index.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hono/clerk-auth": "^3.1.1",
     "@hono/node-server": "^1.19.14",
     "hono": "^4.12.23",
+    "lib0": "^0.2.117",
     "pg": "^8.21.0",
     "ws": "^8.21.0",
-    "y-websocket": "^3.0.0"
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.30"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
-    "prisma": "^7.8.0",
     "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
   }
 }

@@ -8,13 +8,17 @@
     "server"
   ],
   "scripts": {
-    "dev": "npm run dev -w frontend",
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w server\" \"npm run worker -w server\"",
     "server:dev": "npm run dev -w server",
     "lint": "npm run lint --workspaces --if-present",
     "type-check:frontend": "npm run type-check",
     "type-check:server": "npx tsc --noEmit -w server",
     "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }
