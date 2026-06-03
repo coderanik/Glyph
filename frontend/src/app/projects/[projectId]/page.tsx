@@ -14,6 +14,7 @@ import ShareModal from "@/components/ShareModal";
 import StatusBar from "@/components/StatusBar";
 import { apiUrl } from "@/lib/api";
 import { ensureProjectAndMainFile, startCompile, waitForCompile } from "@/lib/compile";
+import { logError } from "@/lib/errorLogger";
 
 export default function ProjectEditorPage({
   params,
@@ -190,7 +191,7 @@ export default function ProjectEditorPage({
         }
 
       } catch (err) {
-        console.error("Failed to load project details:", err);
+        logError("Failed to load project details:", err);
         if (active) {
           setProjectName("Error loading project");
         }
@@ -213,7 +214,7 @@ export default function ProjectEditorPage({
             setCollaborators(collabList);
           }
         } catch (err) {
-          console.error("Failed to reload collaborators list:", err);
+          logError("Failed to reload collaborators list:", err);
         }
       }
       reloadCollabs();
@@ -249,7 +250,7 @@ export default function ProjectEditorPage({
           setPdfUrl(null);
         }
       } catch (err: unknown) {
-        console.error("Compilation error:", err);
+        logError("Compilation error:", err);
         setCompileStatus(err instanceof Error ? err.message : "Failed");
       }
     });
@@ -287,7 +288,7 @@ export default function ProjectEditorPage({
 
       window.URL.revokeObjectURL(blobUrl);
     } catch (err: unknown) {
-      console.error("Download failed:", err);
+      logError("Download failed:", err);
       alert(err instanceof Error ? err.message : "Failed to download PDF");
     }
   };
@@ -341,7 +342,7 @@ export default function ProjectEditorPage({
         alert(text || "Failed to create file");
       }
     } catch (err) {
-      console.error("Error creating file:", err);
+      logError("Error creating file:", err);
       alert("Failed to create file");
     }
   };

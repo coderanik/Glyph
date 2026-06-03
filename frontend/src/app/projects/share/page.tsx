@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
+import { logError } from "@/lib/errorLogger";
 
 function ShareAcceptInner() {
   const router = useRouter();
@@ -55,7 +56,7 @@ function ShareAcceptInner() {
           setError(errText || "Failed to accept sharing invitation.");
         }
       } catch (err: unknown) {
-        console.error("Accept invite error:", err);
+        logError("Accept invite error:", err);
         setError("Failed to connect to server. Please try again.");
       }
     }

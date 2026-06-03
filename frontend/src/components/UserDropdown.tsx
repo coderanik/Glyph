@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Settings, User, LogOut } from "lucide-react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
+import { logError } from "@/lib/errorLogger";
 
 function initialsFromName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -47,7 +48,7 @@ export default function UserDropdown() {
           setBackendVerified(false);
         }
       } catch (err) {
-        console.error("Error verifying backend connection:", err);
+        logError("Error verifying backend connection:", err);
         if (active) {
           setBackendVerified(false);
         }

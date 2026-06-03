@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, Copy, Check, ShieldAlert, Eye, Edit2 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
+import { logError } from "@/lib/errorLogger";
 
 const MAX_COLLABORATORS = 3;
 
@@ -57,7 +58,7 @@ export default function ShareModal({
         setError(errText || "Only the project owner can invite collaborators.");
       }
     } catch (err) {
-      console.error("Error generating share link:", err);
+      logError("Error generating share link:", err);
       setError("Failed to reach server. Please try again.");
     } finally {
       setLoading(false);
