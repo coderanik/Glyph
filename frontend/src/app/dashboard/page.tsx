@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useUser, UserButton, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
 import "./dashboard.css";
+import { logError } from "@/lib/errorLogger";
 
 /* ── Icon components (inline SVGs to avoid icon library deps) ── */
 
@@ -255,7 +256,7 @@ export default function DashboardPage() {
         setProjectsList(data);
       }
     } catch (err) {
-      console.error("Failed to load projects:", err);
+      logError("Failed to load projects:", err);
     } finally {
       setIsProjectsLoading(false);
     }
@@ -364,7 +365,7 @@ Start writing your LaTeX document here...
       // 3. Redirect to the editor page
       router.push(`/projects/${project.id}`);
     } catch (err) {
-      console.error("Failed to create project:", err);
+      logError("Failed to create project:", err);
       alert("Failed to create project. Please try again.");
     } finally {
       setIsCreating(false);

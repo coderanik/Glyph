@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
+import { logError } from "@/lib/errorLogger";
  
 // --- OUTLINE PARSING HELPER FOR EDITOR MODE ---
 function parseOutline(content: string) {
@@ -146,7 +147,7 @@ export default function Sidebar({
           setProjects(data);
         }
       } catch (err) {
-        console.error("Failed to load projects in Sidebar:", err);
+        logError("Failed to load projects in Sidebar:", err);
       } finally {
         if (active) setLoading(false);
       }
@@ -474,7 +475,7 @@ function SidebarAiPanel({
         },
       ]);
     } catch (err) {
-      console.error("AI Error:", err);
+      logError("AI Error:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       const errMsgId = window.crypto.randomUUID();
       setMessages((prev) => [

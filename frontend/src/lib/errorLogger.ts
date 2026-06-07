@@ -1,0 +1,5 @@
+export function logError(context: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[${context}]`, error);
+  // Future: send to error monitoring service
+}
