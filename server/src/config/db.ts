@@ -109,6 +109,15 @@ export async function initializeDatabase() {
       )
     `);
 
+    // 6. Subscribers Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscribers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     await client.query('COMMIT');
     console.log('✅ PostgreSQL database schema initialized successfully.');
   } catch (err) {
