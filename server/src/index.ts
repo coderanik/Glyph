@@ -6,7 +6,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import authRoutes from './routes/authRoutes.js'
 import projectRoutes from './routes/projectRoutes.js'
-import { initializeDatabase } from './config/db.js'
+import { initializeDatabase, query } from './config/db.js'
 
 // Initialize database schema tables on startup
 initializeDatabase().catch((err) => {
@@ -32,6 +32,25 @@ app.use('*', clerkMiddleware())
 app.route('/auth', authRoutes)
 app.route('/projects', projectRoutes)
 
+app.post('/subscribe', async (c) => {
+  try {
+    const { email } = await c.req.json();
+    if (!email || !email.includes('@')) {
+      return c.json({ error: 'Invalid email address' }, 400);
+    }
+    
+    // Insert into database, ignore if duplicate email
+    await query(
+      'INSERT INTO subscribers (email) VALUES ($1) ON CONFLICT (email) DO NOTHING',
+      [email]
+    );
+    
+    return c.json({ success: true });
+  } catch (err) {
+    console.error('Error in subscribe route:', err);
+    return c.json({ error: 'Failed to subscribe' }, 500);
+  }
+})
 
 app.get('/', (c) => {
   return c.text('Backend is running!')
