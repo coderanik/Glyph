@@ -2,16 +2,16 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: glyph
-      POSTGRES_PASSWORD: glyph_password
-      POSTGRES_DB: glyph
+      POSTGRES_USER: ${POSTGRES_USER:-glyph}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-glyph_password}
+      POSTGRES_DB: ${POSTGRES_DB:-glyph}
     ports:
       # Use 5433 on the host so a local Postgres on 5432 does not shadow this service.
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U glyph -d glyph"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-glyph} -d ${POSTGRES_DB:-glyph}"]
       interval: 3s
       timeout: 3s
       retries: 10
@@ -23,28 +23,48 @@ services:
     ports:
       - "${PORT:-8083}:${PORT:-8083}"
     env_file:
-      - path: server/.env
-        required: false
+      - .env
     environment:
       # Override DATABASE_URL to point to the Docker Postgres container
-      - DATABASE_URL=postgresql://glyph:glyph_password@db:5432/glyph
-      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      - PORT=${PORT:-8083}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-glyph}:${POSTGRES_PASSWORD:-glyph_password}@db:5432/${POSTGRES_DB:-glyph}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8083}/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   compile-worker:
     build:
       context: .
       dockerfile: server/Dockerfile.worker
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://glyph:glyph_password@db:5432/glyph
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-glyph}:${POSTGRES_PASSWORD:-glyph_password}@db:5432/${POSTGRES_DB:-glyph}
     depends_on:
       db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+        - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL:-/dashboard}
+        - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:-/dashboard}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8083}
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      backend:
         condition: service_healthy
 
 volumes:
