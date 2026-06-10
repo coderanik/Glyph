@@ -100,7 +100,7 @@ type SidebarProps = {
   activeFileId?: string | null;
   onFileSelect?: (fileId: string) => void;
   onFileCreate?: () => void;
-  collaborators?: { id: string; name: string; initials: string; color: string; online: boolean }[];
+  collaborators?: { id: string; name: string; initials: string; color: string; online: boolean; imageUrl: string | null }[];
   readOnly?: boolean;
   onInsertText?: (text: string) => void;
   onGetEditorContext?: () => { fileContent: string; selectedText: string };
@@ -180,10 +180,15 @@ export default function Sidebar({
                   className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary hover:bg-bg-primary transition-colors"
                 >
                   <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0"
+                    className="w-5 h-5 rounded-full flex items-center justify-center overflow-hidden text-[8px] font-bold text-white shrink-0"
                     style={{ background: collab.color }}
                   >
-                    {collab.initials}
+                    {collab.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={collab.imageUrl} alt={collab.name} className="w-full h-full object-cover" />
+                    ) : (
+                      collab.initials
+                    )}
                   </div>
                   <span className="truncate flex-1 font-medium">{collab.name}</span>
                   {collab.online ? (
@@ -344,7 +349,7 @@ export default function Sidebar({
   return (
     <aside className="w-[200px] bg-bg-secondary text-text-secondary flex flex-col h-screen border-r border-border-secondary shrink-0 select-none">
       <Link href="/dashboard" className="h-12 border-b border-border-secondary flex items-center px-4 gap-2 text-text-primary font-semibold text-sm tracking-wide hover:opacity-90 transition-opacity">
-        <Image src="/logo.png" alt="Glyph Logo" width={20} height={20} className="rounded-[4px] shrink-0" />
+        <Image src="/logo.png" alt="Glyph Logo" width={26} height={26} className="rounded-[5px] shrink-0" />
         <span className="text-text-primary">Glyph</span>
       </Link>
  
@@ -519,7 +524,7 @@ function SidebarAiPanel({
             <div
               className={`p-2.5 rounded-lg max-w-[90%] leading-relaxed ${
                 msg.sender === "user"
-                  ? "bg-accent text-white rounded-tr-none font-medium"
+                  ? "bg-accent text-[#0e0f11] font-semibold rounded-tr-none"
                   : "bg-bg-primary border border-border-secondary text-text-secondary rounded-tl-none"
               }`}
             >
@@ -541,7 +546,7 @@ function SidebarAiPanel({
                     {onInsertText && (
                       <button
                         onClick={() => onInsertText(msg.code!)}
-                        className="px-1.5 py-0.5 rounded bg-accent text-white hover:bg-accent-hover flex items-center gap-1 cursor-pointer text-[9px] font-semibold transition-colors"
+                        className="px-1.5 py-0.5 rounded bg-accent text-[#0e0f11] hover:bg-accent-hover flex items-center gap-1 cursor-pointer text-[9px] font-semibold transition-colors"
                         title="Insert at cursor or replace selection"
                       >
                         <Plus size={10} />
@@ -604,7 +609,7 @@ function SidebarAiPanel({
         <button
           onClick={() => handleSend(input)}
           disabled={!input.trim() || isTyping}
-          className="p-1.5 rounded bg-accent hover:bg-accent-hover disabled:bg-bg-tertiary disabled:text-text-tertiary text-white transition-all cursor-pointer flex items-center justify-center shrink-0"
+          className="p-1.5 rounded bg-accent hover:bg-accent-hover disabled:bg-bg-tertiary disabled:text-text-tertiary text-[#0e0f11] transition-all cursor-pointer flex items-center justify-center shrink-0"
         >
           <Send size={13} />
         </button>
