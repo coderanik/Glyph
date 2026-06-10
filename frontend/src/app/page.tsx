@@ -88,8 +88,8 @@ export default function Home() {
             <Image 
               src="/logo.png" 
               alt="Glyph Logo" 
-              width={34} 
-              height={34} 
+              width={40} 
+              height={40} 
               className="rounded-[6px] transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3" 
             />
             <span className="font-mono text-xl font-bold transition-colors duration-300 group-hover:text-[var(--accent)]">
@@ -647,7 +647,7 @@ export default function Home() {
             {/* Column 1: Brand details */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Image src="/logo.png" alt="Glyph Logo" width={28} height={28} className="rounded-[5px]" />
+                <Image src="/logo.png" alt="Glyph Logo" width={34} height={34} className="rounded-[6px]" />
                 <span className="font-mono font-bold text-lg">glyph</span>
               </div>
               {/* Real-time status indicator */}
