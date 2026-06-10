@@ -119,10 +119,15 @@ export default function UserDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-300 hover:ring-2 ring-zinc-300 dark:ring-zinc-700 transition-all focus:outline-none"
+        className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center overflow-hidden text-[10px] font-bold text-zinc-600 dark:text-zinc-300 hover:ring-2 ring-zinc-300 dark:ring-zinc-700 transition-all focus:outline-none"
         title="Account"
       >
-        {userLabel || "…"}
+        {user.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.imageUrl} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          userLabel || "…"
+        )}
       </button>
 
       {isOpen && (
