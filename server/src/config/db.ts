@@ -21,7 +21,9 @@ export const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
   // If connecting to Supabase over SSL (recommended/required in production):
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  ssl: (databaseUrl && (databaseUrl.includes('supabase.com') || databaseUrl.includes('neon.tech')))
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 // Prevent unhandled errors from crashing the Node.js server when connections drop/time out in the pool
