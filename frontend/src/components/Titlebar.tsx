@@ -11,7 +11,7 @@ type TitlebarProps = {
   canCompile: boolean;
   theme?: "light" | "dark";
   onThemeToggle?: () => void;
-  collaborators?: { id: string; name: string; initials: string; color: string; online: boolean }[];
+  collaborators?: { id: string; name: string; initials: string; color: string; online: boolean; imageUrl: string | null }[];
   onShareClick?: () => void;
 };
 
@@ -74,13 +74,18 @@ export default function Titlebar({
           {collaborators.map((c) => (
             <div
               key={c.id}
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white border border-bg-primary select-none ${
-                c.online ? "ring-[1px] ring-green-400" : ""
+              className={`w-5.5 h-5.5 rounded-full flex items-center justify-center overflow-hidden text-[8px] font-bold text-white border border-bg-primary select-none ${
+                c.online ? "ring-[1.5px] ring-green-400" : ""
               }`}
               style={{ background: c.color }}
               title={`${c.name} (${c.online ? 'Online' : 'Offline'})`}
             >
-              {c.initials}
+              {c.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
+              ) : (
+                c.initials
+              )}
             </div>
           ))}
         </div>
@@ -92,7 +97,7 @@ export default function Titlebar({
           className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors cursor-pointer select-none ${
             isCompiling || !canCompile
               ? "bg-bg-secondary text-text-tertiary cursor-not-allowed"
-              : "bg-accent hover:bg-accent-hover text-white"
+              : "bg-accent hover:bg-accent-hover text-[#0e0f11] font-semibold"
           }`}
         >
           {isCompiling ? (
