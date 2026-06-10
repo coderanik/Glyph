@@ -36,7 +36,7 @@ export default function PdfViewer({
         />
       ) : (
         <div className="flex-1 overflow-auto flex items-center justify-center p-8">
-          <div className="aspect-[1/1.414] w-[400px] sm:w-[500px] lg:w-[600px] max-w-full bg-bg-primary shadow-lg rounded-sm shrink-0 flex items-center justify-center text-text-tertiary select-none border border-border-secondary">
+          <div className="aspect-[1/1.414] w-[400px] sm:w-[500px] lg:w-[600px] max-w-full bg-bg-primary shadow-lg rounded-sm shrink-0 flex items-center justify-center text-text-tertiary select-none border border-border-secondary pdf-mock-document">
             <div className="flex flex-col items-center">
               <FileText size={36} className="mb-3 opacity-40 text-accent" />
               <p className="font-medium text-sm text-text-secondary tracking-wide">
