@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser, UserButton, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
@@ -134,22 +135,7 @@ function IconSettings({ size = 16 }: { size?: number }) {
   );
 }
 
-function IconSun({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-      <circle cx="8" cy="8" r="3" />
-      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" />
-    </svg>
-  );
-}
 
-function IconMoon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13.5 8.5A5.5 5.5 0 117.5 2.5a4 4 0 006 6z" />
-    </svg>
-  );
-}
 
 function IconTrashSmall({ size = 16 }: { size?: number }) {
   return (
@@ -209,7 +195,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
   
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const theme = "dark";
   const [activeNav, setActiveNav] = useState("all");
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
@@ -232,14 +218,7 @@ export default function DashboardPage() {
   const [projectName, setProjectName] = useState("Untitled Project");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Load theme from localStorage on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("glyph-theme");
-    if (savedTheme === "light" || savedTheme === "dark") {
-      const t = setTimeout(() => setTheme(savedTheme), 0);
-      return () => clearTimeout(t);
-    }
-  }, []);
+  // Default theme is locked to dark mode
 
   // Fetch real projects from DB
   const loadProjectsFromDb = useCallback(async () => {
@@ -285,13 +264,7 @@ export default function DashboardPage() {
     return list.filter((p) => p.name.toLowerCase().includes(q));
   }, [search, projectsList, activeNav]);
 
-  const toggleTheme = () => {
-    setTheme((t) => {
-      const nextTheme = t === "light" ? "dark" : "light";
-      localStorage.setItem("glyph-theme", nextTheme);
-      return nextTheme;
-    });
-  };
+
 
   const handleSelectAll = () => {
     if (selectAll) {
@@ -373,23 +346,28 @@ Start writing your LaTeX document here...
     }
   };
 
-  const userName = isLoaded && user ? (user.firstName ?? user.username ?? "User") : "User";
   const userInitials = isLoaded && user
     ? (user.firstName?.[0] ?? "").toUpperCase() + (user.lastName?.[0] ?? "").toUpperCase() || "U"
     : "U";
 
   return (
     <div className={`dashboard ${theme}`}>
+      <div className="dash-glow-orb orb-mint" />
+      <div className="dash-glow-orb orb-purple" />
       {/* ── Sidebar ── */}
       <aside className="dash-sidebar">
         <div className="dash-sidebar-top">
           <div className="dash-logo">
             <div className="dash-logo-mark">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M3 4h10M3 8h7M3 12h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <Image
+                src="/logo.png"
+                alt="Glyph Logo"
+                width={38}
+                height={38}
+                className="rounded-[6px] object-cover"
+              />
             </div>
-            Glyph
+            <span>Glyph</span>
           </div>
           <button 
             className="dash-btn-new"
@@ -400,7 +378,7 @@ Start writing your LaTeX document here...
             }}
           >
             <IconPlus size={14} />
-            New project
+            <span>New project</span>
           </button>
         </div>
 
@@ -432,21 +410,9 @@ Start writing your LaTeX document here...
         </div>
 
         <div className="dash-sidebar-footer">
-          <div className="dash-user-row">
-            {isLoaded && user ? (
-              <UserButton />
-            ) : (
-              <div className="dash-avatar">{userInitials}</div>
-            )}
-            <div>
-              <div className="dash-user-name">{userName}</div>
-              <div className="dash-user-plan">Free plan</div>
-            </div>
-            <Link href="/settings" style={{ marginLeft: "auto", display: "flex" }}>
-              <button className="dash-icon-btn" aria-label="Settings">
-                <IconSettings size={16} />
-              </button>
-            </Link>
+          <div className="flex items-center justify-between text-[10px] font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider">
+            <span>Version</span>
+            <span>v0.1.0</span>
           </div>
         </div>
       </aside>
@@ -474,43 +440,59 @@ Start writing your LaTeX document here...
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button
-              className="dash-theme-toggle"
-              onClick={toggleTheme}
-              aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-              title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            >
-              {theme === "light" ? <IconMoon size={15} /> : <IconSun size={15} />}
-            </button>
+            <Link href="/settings" style={{ display: "flex" }}>
+              <button className="dash-icon-btn" aria-label="Settings" title="Settings">
+                <IconSettings size={16} />
+              </button>
+            </Link>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              {isLoaded && user ? (
+                <UserButton />
+              ) : (
+                <div className="dash-avatar">{userInitials}</div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="dash-content">
           <div className="dash-table-wrap">
             {isProjectsLoading ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs font-medium text-zinc-500">Loading projects...</p>
+              <div className="dash-loading-state">
+                <div className="dash-loading-spinner" />
+                <p className="text-xs font-mono tracking-wider uppercase text-[var(--color-text-secondary)]">Retrieving documents...</p>
               </div>
             ) : filteredProjects.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="mx-auto mb-3 text-zinc-300 dark:text-zinc-700 flex justify-center">
-                  <IconFile size={36} />
+              <div className="dash-empty-state">
+                <div className="dash-empty-icon-wrap">
+                  <IconFile size={22} />
                 </div>
-                <p className="text-sm font-medium text-zinc-500">
+                <p className="dash-empty-title">
                   {activeNav === "archived"
-                    ? "No archived projects"
+                    ? "No Archived Projects"
                     : activeNav === "trash"
-                    ? "Trash is empty"
-                    : "No projects found"}
+                    ? "Trash is Empty"
+                    : "No Projects Found"}
                 </p>
-                <p className="text-xs text-zinc-400 mt-1">
+                <p className="dash-empty-desc">
                   {activeNav === "archived"
                     ? "Archived documents will appear here."
                     : activeNav === "trash"
                     ? "Trash items are cleaned up automatically."
                     : "Create a new project to get started."}
                 </p>
+                {activeNav !== "archived" && activeNav !== "trash" && (
+                  <button
+                    className="dash-empty-btn"
+                    onClick={() => {
+                      setProjectName("Untitled LaTeX Project");
+                      setProjectType("empty");
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    Create your first project
+                  </button>
+                )}
               </div>
             ) : (
               <table className="dash-table">
@@ -532,7 +514,10 @@ Start writing your LaTeX document here...
                 </thead>
                 <tbody>
                   {filteredProjects.map((project) => (
-                    <tr key={project.id}>
+                    <tr 
+                      key={project.id} 
+                      className={selected.has(project.id) ? "selected" : ""}
+                    >
                       <td>
                         <input
                           type="checkbox"
