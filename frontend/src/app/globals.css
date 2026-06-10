@@ -58,8 +58,10 @@
   --color-border-tertiary: #27272a;
   --color-border-secondary: #3f3f46;
 
-  --color-accent-bg: #1e1a3a;
-  --color-accent-text: #c4bfff;
+  --color-accent: #6ee7b7;
+  --color-accent-hover: #34d399;
+  --color-accent-bg: rgba(110, 231, 183, 0.08);
+  --color-accent-text: #6ee7b7;
 }
 
 body {
