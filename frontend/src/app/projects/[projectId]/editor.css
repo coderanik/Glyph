@@ -1,0 +1,251 @@
+/* ── Ambient Glow Orbs ── */
+.editor-glow-orb {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  filter: blur(160px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+.editor-glow-orb.orb-mint {
+  top: -10%;
+  left: 5%;
+  background: #6ee7b7;
+  animation: floatOrb 22s ease-in-out infinite alternate;
+}
+.editor-glow-orb.orb-purple {
+  bottom: -5%;
+  right: 10%;
+  background: #a78bfa;
+  animation: floatOrb 26s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(60px, 40px) scale(1.2); }
+}
+
+/* ── Glassmorphic Workspace Layout ── */
+.editor-workspace {
+  position: relative;
+  background: radial-gradient(circle at top left, #0f1114, #0e0f11 50%, #0b110f 100%) !important;
+  z-index: 1;
+}
+
+/* Header (Titlebar) */
+.editor-workspace header {
+  background: rgba(21, 23, 26, 0.55) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-bottom: 1px solid rgba(110, 231, 183, 0.06) !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Activity Bar */
+.editor-workspace .w-11 {
+  background: rgba(14, 15, 17, 0.6) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(110, 231, 183, 0.04) !important;
+  z-index: 10;
+}
+
+.editor-workspace .w-11 button {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editor-workspace .w-11 button:hover {
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-0.5px);
+}
+
+/* Explorer Sidebar */
+.editor-workspace aside {
+  background: rgba(15, 17, 20, 0.4) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(110, 231, 183, 0.04) !important;
+  z-index: 9;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sidebar navigation tabs */
+.editor-workspace aside button {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Main workspace divider */
+.editor-workspace main {
+  background: transparent !important;
+  z-index: 5;
+}
+
+/* Code editor and PDF preview panel wrappers */
+.editor-workspace main > div {
+  background: rgba(13, 14, 16, 0.3) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-color: rgba(110, 231, 183, 0.03) !important;
+}
+
+/* Pane Headers (LaTeX Source / Preview titles) */
+.editor-workspace main > div > div.h-7 {
+  background: rgba(21, 23, 26, 0.45) !important;
+  border-bottom: 1px solid rgba(110, 231, 183, 0.04) !important;
+}
+
+/* CodeMirror Editor styles */
+.editor-workspace .cm-editor {
+  background: transparent !important;
+}
+.editor-workspace .cm-gutter {
+  background: rgba(15, 17, 20, 0.25) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+.editor-workspace .cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* PDF Viewer pane custom styles */
+.editor-workspace .bg-bg-tertiary {
+  background: transparent !important;
+}
+
+.editor-workspace iframe {
+  background: rgba(18, 20, 24, 0.15) !important;
+  border-radius: 8px;
+}
+
+/* Empty Compilation Preview PDF Mock Document card */
+.editor-workspace .pdf-mock-document {
+  background: rgba(21, 23, 26, 0.45) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.45) !important;
+  border-radius: 6px !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.editor-workspace .pdf-mock-document:hover {
+  transform: translateY(-2px) scale(1.005);
+  border-color: rgba(110, 231, 183, 0.25) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    0 24px 64px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(110, 231, 183, 0.04) !important;
+}
+
+/* Status Bar footer */
+.editor-workspace footer {
+  background: rgba(13, 14, 16, 0.8) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-top: 1px solid rgba(110, 231, 183, 0.06) !important;
+  z-index: 10;
+}
+
+/* ── Editor Loading Screen ── */
+.editor-loading-screen {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at top left, #0f1114, #0e0f11 50%, #0b110f 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.editor-loading-card {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(21, 23, 26, 0.4);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 40px 60px;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.04),
+    0 24px 64px rgba(0, 0, 0, 0.5);
+  animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editor-loading-logo-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-loading-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  object-fit: cover;
+  animation: logoPulse 2s ease-in-out infinite alternate;
+  z-index: 2;
+  box-shadow: 0 4px 16px rgba(110, 231, 183, 0.25);
+}
+
+@keyframes logoPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.95;
+    box-shadow: 0 4px 12px rgba(110, 231, 183, 0.2);
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 1;
+    box-shadow: 0 8px 24px rgba(110, 231, 183, 0.4);
+  }
+}
+
+.editor-loading-spinner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(110, 231, 183, 0.05);
+  border-top-color: var(--color-accent, #6ee7b7);
+  border-bottom-color: var(--color-accent, #6ee7b7);
+  border-radius: 50%;
+  animation: dash-spin 1.2s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+  z-index: 1;
+}
+
+.editor-loading-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #8b95a5);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
