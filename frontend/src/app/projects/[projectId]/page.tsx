@@ -57,7 +57,7 @@ export default function ProjectEditorPage({
 
   // Collaborative files, users, and modal control states
   const [projectFiles, setProjectFiles] = useState<{ id: string; name: string; path: string; content?: string }[]>([]);
-  const [collaborators, setCollaborators] = useState<{ id: string; name: string; initials: string; color: string; online: boolean }[]>([]);
+  const [collaborators, setCollaborators] = useState<{ id: string; name: string; initials: string; color: string; online: boolean; imageUrl: string | null }[]>([]);
   const [userRole, setUserRole] = useState<"write" | "read">("write");
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
