@@ -12,8 +12,9 @@ const __dirname = path.dirname(__filename);
 //   - tsx watch:  src/config/env.ts  → ../../.env  → server/.env
 //   - compiled:   dist/src/config/env.js → ../../../.env → server/.env
 const candidates = [
-  path.resolve(__dirname, '../../.env'),   // tsx watch (src/config → server/)
-  path.resolve(__dirname, '../../../.env'), // compiled  (dist/src/config → server/)
+  path.resolve(__dirname, '../../.env'),     // tsx watch in server/
+  path.resolve(__dirname, '../../../.env'),   // compiled in server/ OR tsx watch in root/
+  path.resolve(__dirname, '../../../../.env'), // compiled in root/
 ];
 
 let loaded = false;
