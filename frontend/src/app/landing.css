@@ -233,7 +233,7 @@
   color: var(--accent);
   font-family: var(--font-mono);
   font-weight: bold;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: 1px solid rgba(110, 231, 183, 0.25);
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -321,7 +321,7 @@
   color: var(--text);
   font-family: var(--font-mono);
   font-weight: bold;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
