@@ -21,6 +21,7 @@ interface Collaborator {
   initials: string;
   color: string;
   email: string | null;
+  imageUrl: string | null;
   role: 'owner' | 'collaborator';
   permission: 'write' | 'read';
   online: boolean;
@@ -436,6 +437,7 @@ export async function getProjectCollaborators(c: Context) {
           initials: [u.firstName, u.lastName].filter((n): n is string => !!n).map((n: string) => n[0].toUpperCase()).join('') || 'CO',
           color: `#${crypto.createHash('md5').update(uid).digest('hex').substring(0, 6)}`,
           email: u.emailAddresses?.[0]?.emailAddress || null,
+          imageUrl: u.imageUrl || null,
         };
       } catch (clerkErr) {
         // Fallback if Clerk fetch fails (e.g. user deleted or offline testing)
@@ -445,6 +447,7 @@ export async function getProjectCollaborators(c: Context) {
           initials: 'CL',
           color: '#8b8b8b',
           email: null,
+          imageUrl: null,
         };
       }
     };
