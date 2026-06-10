@@ -1,0 +1,76 @@
+name: LLM Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  llm-review:
+    name: llm-review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...origin/${{ github.head_ref }} \
+            -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md' \
+            > pr_diff.txt
+          echo "diff_size=$(wc -c < pr_diff.txt)" >> $GITHUB_OUTPUT
+
+      - name: Run LLM Code Review
+        id: review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          DIFF=$(cat pr_diff.txt)
+
+          RESPONSE=$(curl -s \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg diff "$DIFF" \
+              '{
+                contents: [{
+                  parts: [{
+                    text: ("You are an expert code reviewer for a real-time collaborative LaTeX editor built with Next.js, TypeScript, PostgreSQL, Docker, and Yjs.\n\nReview the following PR diff and provide:\n1. **Summary** - What this PR does in 1-2 sentences\n2. **Issues** - Any bugs, security vulnerabilities, or logic errors (be specific with line references)\n3. **Suggestions** - Code quality, performance, or maintainability improvements\n4. **Verdict** - One of: APPROVE / REQUEST_CHANGES / COMMENT\n\nBe concise and actionable. If the diff is empty or trivial, say so.\n\nDiff:\n" + $diff)
+                  }]
+                }],
+                generationConfig: {
+                  maxOutputTokens: 2048,
+                  temperature: 0.2
+                }
+              }')"
+          )
+
+          REVIEW=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        env:
+          REVIEW_OUTPUT: ${{ steps.review.outputs.review }}
+        with:
+          script: |
+            const review = process.env.REVIEW_OUTPUT || '';
+            const verdict = review.includes('REQUEST_CHANGES') ? 'REQUEST_CHANGES'
+                          : review.includes('APPROVE') ? 'APPROVE'
+                          : 'COMMENT';
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: verdict,
+              body: `## 🤖 LLM Code Review\n\n${review}\n\n---\n*Reviewed by Gemini via GitHub Actions*`
+            });
