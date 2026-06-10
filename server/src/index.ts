@@ -18,11 +18,13 @@ export const app = new Hono()
 
 
 const frontendUrls = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+  ? process.env.FRONTEND_URL.split(',').map(url => url.trim().replace(/\/$/, ''))
   : ['http://localhost:3000', 'http://localhost:3001'];
 
 app.use('*', cors({
-  origin: frontendUrls,
+  origin: (origin) => {
+    return frontendUrls.includes(origin) ? origin : frontendUrls[0];
+  },
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
   credentials: true,
