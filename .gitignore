@@ -1,10 +1,12 @@
 # Ignore all .env files anywhere in the repo
 .env
 .env.*
+!.env.example
 
 # Ignore env files inside any folder
 **/.env
 **/.env.*
+!**/.env.example
 
 # Ignore common env variants
 *.env
