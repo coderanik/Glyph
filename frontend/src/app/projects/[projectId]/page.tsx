@@ -13,6 +13,7 @@ import PdfViewer from "@/components/PdfViewer";
 import ShareModal from "@/components/ShareModal";
 import StatusBar from "@/components/StatusBar";
 import { apiUrl } from "@/lib/api";
+import "./editor.css";
 import { ensureProjectAndMainFile, startCompile, waitForCompile } from "@/lib/compile";
 import { logError } from "@/lib/errorLogger";
 
@@ -349,10 +350,17 @@ export default function ProjectEditorPage({
 
   if (!isLoaded || !isSignedIn || !fileId) {
     return (
-      <div className="flex h-screen items-center justify-center bg-bg-tertiary text-text-primary">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-text-secondary">Opening editor workspace...</p>
+      <div className="editor-loading-screen">
+        <div className="editor-glow-orb orb-mint" />
+        <div className="editor-glow-orb orb-purple" />
+        
+        <div className="editor-loading-card">
+          <div className="editor-loading-logo-wrap">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Glyph Logo" className="editor-loading-logo" />
+            <div className="editor-loading-spinner" />
+          </div>
+          <p className="editor-loading-text">Opening workspace...</p>
         </div>
       </div>
     );
@@ -361,7 +369,9 @@ export default function ProjectEditorPage({
   const activeFile = projectFiles.find((f) => f.id === fileId);
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden bg-bg-primary text-text-primary select-none ${theme}`}>
+    <div className={`flex flex-col h-screen overflow-hidden text-text-primary select-none editor-workspace ${theme}`}>
+      <div className="editor-glow-orb orb-mint" />
+      <div className="editor-glow-orb orb-purple" />
       {/* Title / Action bar */}
       <Titlebar
         projectName={projectName}
