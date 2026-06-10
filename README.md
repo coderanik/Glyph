@@ -12,7 +12,7 @@
 <br />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js_15-black?style=for-the-badge&logo=next.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Next.js_16-black?style=for-the-badge&logo=next.js&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Hono_v4-E36002?style=for-the-badge&logo=hono&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
@@ -144,7 +144,7 @@ Glyph/
 │   │   └── index.ts         # Server boot script listening to API requests & WebSockets
 ├── scripts/                 # Utility scripts for development
 │   └── dev.sh               # Pre-flight environment verifier and auto-start manager
-├── docker-compose.yml       # Configuration to spin up database locally
+├── docker-compose.yml       # Full-stack orchestration (DB, backend, frontend, compile-worker)
 ├── package.json             # Root npm workspace configuration (Monorepo setup)
 └── package-lock.json        # Locked packages for monorepo consistency
 ```
@@ -154,7 +154,7 @@ Glyph/
 ## 🛠️ Tech Stack
 
 ### Frontend
-*   **Framework**: **Next.js 15 (App Router)** for rapid server-side hydration, path routing, and high-performance client applications.
+*   **Framework**: **Next.js 16 (App Router)** for rapid server-side hydration, path routing, and high-performance client applications.
 *   **Language**: **TypeScript** to enforce robust type-safety across components.
 *   **Styling**: **Tailwind CSS v4** featuring modern utility variables, flexbox structures, and dark/light system color palettes.
 *   **Editor Engine**: **CodeMirror 6** for extensible syntax highlighting, lines rendering, linting, and plugin support.
@@ -180,9 +180,10 @@ Follow the guide below to set up your local development environment.
 
 Ensure you have the following installed:
 *   **Node.js**: `v20.x` or later.
-*   **Docker Desktop**: Required to execute safe compiles. Ensure Docker is running.
-*   **PostgreSQL**: Local database instance or a remote instance (e.g. Supabase).
+*   **Docker Desktop**: Required for PostgreSQL, LaTeX compilation, and optional full-stack deployment. Ensure Docker is running.
 *   **Clerk Account**: Free account to manage user authentication.
+
+> **Note**: You do **not** need a separate PostgreSQL installation — Docker Compose provides one automatically.
 
 ---
 
@@ -202,86 +203,99 @@ Before running Glyph, you must register a project with Clerk:
 
 ### Environment Variables Setup
 
-Configure `.env` files in both the frontend and backend workspace folders.
+Glyph uses a **single `.env` file at the repository root** to configure all services (frontend, backend, database, and compile worker).
 
-#### 1. Backend Config
-Create a file named `server/.env` and configure:
-```env
-# Server Port (Hono defaults)
-PORT=8083
-
-# Clerk Keys (retrieve from Clerk dashboard under API Keys)
-CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-
-# Database url connection string (local postgres or Supabase)
-DATABASE_URL=postgresql://postgres:password@localhost:5432/glyph
-
-# Node Environment
-NODE_ENV=development
+```bash
+# Copy the template
+cp .env.example .env
 ```
 
-#### 2. Frontend Config
-Create a file named `frontend/.env.local` and configure:
+Then open `.env` and fill in your keys:
+
 ```env
-# Clerk Keys (retrieve from Clerk dashboard under API Keys)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+# ── CLERK AUTHENTICATION ──────────────────────────────────────
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...   # From Clerk Dashboard
+CLERK_PUBLISHABLE_KEY=pk_test_...               # Same as above
+CLERK_SECRET_KEY=sk_test_...                    # From Clerk Dashboard
 
-# Hono API Endpoint
-NEXT_PUBLIC_API_URL=http://localhost:8083
+# ── GEMINI AI ASSISTANT ───────────────────────────────────────
+GEMINI_API_KEY=your_gemini_api_key_here         # From Google AI Studio
+GEMINI_MODEL=gemini-2.5-flash
+```
 
-# Clerk Auth Navigation Targets
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+All other values (ports, database credentials, Clerk routes) have sensible defaults — you only need to set the keys above.
+
+---
+
+### Option 1: Docker Compose (Recommended)
+
+The easiest way to start everything. One command boots **PostgreSQL + Backend + Frontend + Compile Worker**:
+
+```bash
+# Build all service images
+docker compose build
+
+# Start the entire stack in detached mode
+docker compose up -d
+```
+
+| Service | URL | Description |
+| --- | --- | --- |
+| **Frontend** | [http://localhost:3000](http://localhost:3000) | Next.js web application |
+| **Backend** | [http://localhost:8083](http://localhost:8083) | Hono REST API + WebSocket server |
+| **Database** | `localhost:5433` | PostgreSQL (mapped to host port 5433) |
+| **Compile Worker** | — | Background LaTeX compilation queue |
+
+To stop all services:
+```bash
+docker compose down
 ```
 
 ---
 
-### Quick Start Command
+### Option 2: Quick Start Script (Local Development)
 
-Glyph provides an interactive shell command that checks your Node.js version, ensures Docker is running, installs monorepo dependencies, builds the LaTeX compiler container, and runs all development servers concurrently.
+For hot-reloading during development, use the helper script. It loads environment variables from the root `.env`, installs dependencies, builds the LaTeX compiler image, and starts all dev servers concurrently:
 
 ```bash
-# Make the helper script executable
+# Make the helper script executable (first time only)
 chmod +x scripts/dev.sh
 
-# Spin up the environment
+# Start the dev environment
 ./scripts/dev.sh
 ```
 
+> **Note**: This option requires a running PostgreSQL instance. You can start one with `docker compose up db -d` before running the script.
+
 ---
 
-### Alternative Workspace Installation
+### Option 3: Manual Workspace Setup
 
-If you prefer to install dependencies and run components manually:
+If you prefer full control over each step:
 
 #### 1. Install Workspace Dependencies
-Run this command in the project root to install dependencies for the frontend and server concurrently using npm workspaces:
 ```bash
 npm install
 ```
 
-#### 2. Start PostgreSQL via Docker Compose (Optional)
-If you don't have a local PostgreSQL running, you can spin up the built-in instance:
+#### 2. Start PostgreSQL via Docker Compose
 ```bash
-npm run db:up
+docker compose up db -d
 ```
-*Note: This starts PostgreSQL on port `5432` with username `postgres` and password `password`. The database schema will be automatically created on backend start!*
+*This starts PostgreSQL on host port `5433` with credentials from your `.env` file. The database schema is auto-created on backend startup.*
 
 #### 3. Build the LaTeX Compiler Container
 ```bash
 docker build -t glyph-compiler ./docker
 ```
 
-#### 4. Spin up Servers Concurrently
-Run all services (Next.js client, Hono API server, and compile worker sidecar) together:
+#### 4. Start All Dev Servers
 ```bash
 npm run dev
 ```
 
-*   **Frontend client application**: Available at [http://localhost:3000](http://localhost:3000)
-*   **Hono server endpoints**: Available at [http://localhost:8083](http://localhost:8083)
+*   **Frontend**: [http://localhost:3000](http://localhost:3000)
+*   **Backend**: [http://localhost:8083](http://localhost:8083)
 
 ---
 
@@ -300,12 +314,12 @@ npm run dev
     After updating group permissions, restart your shell or computer for changes to take effect.
 
 ### Q3: Clerk triggers authentication loops or redirection errors
-*   **Cause**: Missed matching Clerk environment variables in `frontend/.env.local` or Clerk settings.
+*   **Cause**: Missed matching Clerk environment variables in the root `.env` or Clerk settings.
 *   **Resolution**: Verify that `NEXT_PUBLIC_CLERK_SIGN_IN_URL` is set to `/sign-in` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` is set to `/sign-up`, and match these targets inside the Clerk dashboard settings.
 
 ### Q4: Database connection failed (pg Pool connection timeout)
 *   **Cause**: The Hono server cannot establish connection with PostgreSQL.
-*   **Resolution**: Ensure PostgreSQL is up and accepting connections on port 5432. Double-check your `DATABASE_URL` credentials inside `server/.env`.
+*   **Resolution**: Ensure PostgreSQL is up (run `docker compose up db -d`). The default connection uses host port `5433`. Double-check your `DATABASE_URL` in the root `.env` file.
 
 ---
 
