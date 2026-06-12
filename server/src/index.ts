@@ -19,11 +19,25 @@ export const app = new Hono()
 
 const frontendUrls = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim().replace(/\/$/, ''))
-  : ['http://localhost:3000', 'http://localhost:3001'];
+  : ['http://localhost:3000', 'http://localhost:3001','http://localhost:3002'];
+
+// Always allow local development origins in addition to configured ones
+const allowedOrigins = new Set([
+  ...frontendUrls,
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
+]);
 
 app.use('*', cors({
   origin: (origin) => {
-    return frontendUrls.includes(origin) ? origin : frontendUrls[0];
+    if (allowedOrigins.has(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return origin;
+    }
+    return frontendUrls[0];
   },
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
@@ -79,14 +93,38 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Server is running on http://localhost:${info.port}`)
   })
 
+  interface ExtWebSocket extends WebSocket {
+    isAlive?: boolean
+  }
+
   const wss = new WebSocketServer({ server: server as unknown as Server })
 
-  wss.on('connection', (conn: WebSocket, req) => {
+  wss.on('connection', (conn: ExtWebSocket, req) => {
+    conn.isAlive = true
+    conn.on('pong', () => {
+      conn.isAlive = true
+    })
+
     const url = req.url || ''
     // Expected path format: /ws/{fileId}
     const roomName = url.split('/').pop() || 'default'
     console.log(`🔌 New WS connection for Yjs room: ${roomName}`)
     setupWSConnection(conn, roomName)
+  })
+
+  const interval = setInterval(() => {
+    wss.clients.forEach((client: ExtWebSocket) => {
+      if (client.isAlive === false) {
+        console.log('🔌 Terminating inactive/broken WebSocket connection.')
+        return client.terminate()
+      }
+      client.isAlive = false
+      client.ping()
+    })
+  }, 20000)
+
+  wss.on('close', () => {
+    clearInterval(interval)
   })
 }
 
