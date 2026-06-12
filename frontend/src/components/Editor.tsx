@@ -16,12 +16,14 @@ export default function Editor({
   onChange,
   readOnly = false,
   editorViewRef,
+  onConnectionStatusChange,
 }: {
   fileId: string;
   initialContent?: string;
   onChange?: (text: string) => void;
   readOnly?: boolean;
   editorViewRef?: React.RefObject<EditorView | null>;
+  onConnectionStatusChange?: (connected: boolean) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -102,6 +104,13 @@ export default function Editor({
       onChangeRef.current(initialContent || ytext.toString());
     }
 
+    const onStatusChange = ({ status }: { status: string }) => {
+      if (onConnectionStatusChange) {
+        onConnectionStatusChange(status === "connected");
+      }
+    };
+    provider.on("status", onStatusChange);
+
     provider.on("sync", (isSynced: boolean) => {
       if (isSynced && !cancelled) {
         view.dispatch({
@@ -120,13 +129,14 @@ export default function Editor({
       cancelled = true;
       window.clearTimeout(connectId);
       ytext.unobserve(onYjsChange);
+      provider.off("status", onStatusChange);
       view.destroy();
       if (editorViewRef) {
         editorViewRef.current = null;
       }
       provider.destroy();
     };
-  }, [fileId, initialContent, readOnly, editorViewRef]);
+  }, [fileId, initialContent, readOnly, editorViewRef, onConnectionStatusChange]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }
