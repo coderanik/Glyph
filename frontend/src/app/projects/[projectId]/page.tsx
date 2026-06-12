@@ -52,7 +52,7 @@ export default function ProjectEditorPage({
   const [compileStatus, setCompileStatus] = useState<string | null>("Not compiled yet");
 
   // Sync / Connection state
-  const [connected] = useState(true);
+  const [connected, setConnected] = useState(false);
   const [wordCount, setWordCount] = useState(0);
 
   // Collaborative files, users, and modal control states
@@ -201,9 +201,13 @@ export default function ProjectEditorPage({
 
     loadProjectData();
 
-    // Reload collaborators list periodically (every 10 seconds) for updates
+    // Reload collaborators list periodically for updates.
+    // Skip when the browser is offline to avoid Clerk token errors.
+    let collabFailCount = 0;
     const interval = setInterval(() => {
       async function reloadCollabs() {
+        // Don't attempt network requests when the browser is offline
+        if (typeof navigator !== "undefined" && !navigator.onLine) return;
         try {
           const token = await getToken();
           if (!token) return;
@@ -213,13 +217,18 @@ export default function ProjectEditorPage({
           if (collabRes.ok && active) {
             const collabList = await collabRes.json();
             setCollaborators(collabList);
+            collabFailCount = 0; // reset on success
           }
         } catch (err) {
-          logError("Failed to reload collaborators list:", err);
+          collabFailCount++;
+          // Only log the first failure to avoid spamming the console
+          if (collabFailCount <= 1) {
+            logError("Failed to reload collaborators list:", err);
+          }
         }
       }
       reloadCollabs();
-    }, 10000);
+    }, 30000);
 
     return () => {
       active = false;
@@ -437,6 +446,7 @@ export default function ProjectEditorPage({
                   onChange={handleEditorChange}
                   readOnly={userRole === "read"}
                   editorViewRef={editorViewRef}
+                  onConnectionStatusChange={setConnected}
                 />
               )}
             </div>
