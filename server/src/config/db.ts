@@ -20,10 +20,14 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  // If connecting to Supabase over SSL (recommended/required in production):
-  ssl: (databaseUrl && (databaseUrl.includes('supabase.com') || databaseUrl.includes('neon.tech')))
-    ? { rejectUnauthorized: false }
-    : undefined,
+  // If connecting to Supabase, Neon, or Railway over SSL (recommended/required in production):
+  ssl: (databaseUrl && (
+    databaseUrl.includes('supabase.com') ||
+    databaseUrl.includes('neon.tech') ||
+    databaseUrl.includes('railway') ||
+    databaseUrl.includes('rlwy.net') ||
+    process.env.DB_SSL === 'true'
+  )) ? { rejectUnauthorized: false } : undefined,
 });
 
 // Prevent unhandled errors from crashing the Node.js server when connections drop/time out in the pool
