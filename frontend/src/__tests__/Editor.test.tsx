@@ -37,6 +37,7 @@ vi.mock('y-websocket', () => {
         cb(true)
       }
     }
+    off(event: string, cb: (...args: unknown[]) => void) {}
     connect() {}
     destroy() {}
   }
