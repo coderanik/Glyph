@@ -42,6 +42,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['POST', 'GET', 'OPTIONS', 'PUT', 'DELETE'],
   credentials: true,
+  maxAge: 86400,
 }))
 
 app.use('*', clerkMiddleware())
