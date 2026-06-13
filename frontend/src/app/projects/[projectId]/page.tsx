@@ -14,7 +14,7 @@ import ShareModal from "@/components/ShareModal";
 import StatusBar from "@/components/StatusBar";
 import { apiUrl } from "@/lib/api";
 import "./editor.css";
-import { ensureProjectAndMainFile, startCompile, waitForCompile } from "@/lib/compile";
+import { ensureProjectAndMainFile, startCompile, waitForCompile, fetchJobPdf } from "@/lib/compile";
 import { logError } from "@/lib/errorLogger";
 
 export default function ProjectEditorPage({
@@ -48,7 +48,29 @@ export default function ProjectEditorPage({
 
   // Compilation state
   const [isCompiling, startCompileTransition] = useTransition();
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrlState] = useState<string | null>(null);
+  const pdfBlobUrlRef = useRef<string | null>(null);
+
+  const setPdfUrl = (url: string | null) => {
+    if (pdfBlobUrlRef.current) {
+      window.URL.revokeObjectURL(pdfBlobUrlRef.current);
+      pdfBlobUrlRef.current = null;
+    }
+    if (url && url.startsWith("blob:")) {
+      pdfBlobUrlRef.current = url;
+    }
+    setPdfUrlState(url);
+  };
+
+  // Clean up the blob URL on component unmount
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrlRef.current) {
+        window.URL.revokeObjectURL(pdfBlobUrlRef.current);
+      }
+    };
+  }, []);
+
   const [compileStatus, setCompileStatus] = useState<string | null>("Not compiled yet");
 
   // Sync / Connection state
@@ -253,8 +275,14 @@ export default function ProjectEditorPage({
         const job = await waitForCompile(projectId, jobId, getToken);
         if (job.status === "success") {
           setCompileStatus("Success");
-          // Use absolute API URL to load PDF in iframe
-          setPdfUrl(apiUrl(job.pdf_url || ""));
+          const freshToken = await getToken();
+          if (!freshToken) {
+            setCompileStatus("Auth expired");
+            return;
+          }
+          const pdfBlob = await fetchJobPdf(projectId, jobId, freshToken);
+          const blobUrl = window.URL.createObjectURL(pdfBlob);
+          setPdfUrl(blobUrl);
         } else {
           setCompileStatus("Failed");
           setPdfUrl(null);
@@ -273,21 +301,24 @@ export default function ProjectEditorPage({
     }
 
     try {
-      const token = await getToken();
-      if (!token) return;
+      let blobUrl = pdfUrl;
+      if (!pdfUrl.startsWith("blob:")) {
+        const token = await getToken();
+        if (!token) return;
 
-      const res = await fetch(pdfUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+        const res = await fetch(pdfUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!res.ok) {
-        throw new Error("Failed to retrieve PDF file from server");
+        if (!res.ok) {
+          throw new Error("Failed to retrieve PDF file from server");
+        }
+
+        const blob = await res.blob();
+        blobUrl = window.URL.createObjectURL(blob);
       }
-
-      const blob = await res.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -296,7 +327,9 @@ export default function ProjectEditorPage({
       a.click();
       document.body.removeChild(a);
 
-      window.URL.revokeObjectURL(blobUrl);
+      if (!pdfUrl.startsWith("blob:")) {
+        window.URL.revokeObjectURL(blobUrl);
+      }
     } catch (err: unknown) {
       logError("Download failed:", err);
       alert(err instanceof Error ? err.message : "Failed to download PDF");
