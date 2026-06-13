@@ -19,6 +19,43 @@ Glyph is structured as an npm-workspace monorepo. On Railway, we deploy **three 
 
 ---
 
+## ⚡ Automated Deployment (Recommended)
+
+There are two primary ways to deploy the complete Glyph stack to Railway with all services and databases pre-linked and configured:
+
+### Option A: One-Click Template Deployment
+1. Click the **Deploy on Railway** badge in the [README.md](file:///Users/anik/Code/Glyph/README.md) or use this direct link:
+   [Deploy on Railway](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fcoderanik%2FGlyph)
+2. Railway will automatically create all four resources in your workspace canvas:
+   - Managed **PostgreSQL** Database.
+   - **Hono API Server (`glyph-api`)** using `/server/Dockerfile`.
+   - **Compile Worker (`glyph-worker`)** using `/server/Dockerfile.worker`.
+   - **Next.js Frontend (`glyph-frontend`)** using `/frontend/Dockerfile`.
+3. Fill in your secrets (`CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `GEMINI_API_KEY`) when prompted.
+4. Click **Deploy**. Everything else is set up automatically.
+
+### Option B: Railway Infrastructure as Code (IaC) via CLI
+If you want to manage infrastructure configurations via code, you can use the TypeScript definitions stored under `.railway/railway.ts`:
+1. Install the Railway CLI: `npm install -g @railway/cli`.
+2. Authenticate the CLI with your Railway account:
+   ```bash
+   railway login
+   ```
+3. Link your local directory to your target Railway project:
+   ```bash
+   railway link
+   ```
+4. Apply the IaC configuration to spin up all services and connections:
+   ```bash
+   railway config apply
+   ```
+5. Railway will analyze `.railway/railway.ts`, print a deployment plan, and provision everything upon confirmation.
+6. Once deployed, add your `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `GEMINI_API_KEY` to the `glyph-api` service settings page on the Railway dashboard.
+
+---
+
+## 🛠️ Manual Deployment Flow (Alternative)
+
 ## 1. Provision a PostgreSQL Database
 
 1. In your Railway Project canvas, click **New** -> **Database** -> **Add PostgreSQL**.
