@@ -19,13 +19,15 @@ export const pool = new Pool({
   // For serverless environments or long-lived server, configure pool settings
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  // If connecting to Supabase, Neon, or Railway over SSL (recommended/required in production):
+  connectionTimeoutMillis: 10000,
+  // Managed Postgres (Supabase, Neon, Railway, Render) requires SSL in production:
   ssl: (databaseUrl && (
     databaseUrl.includes('supabase.com') ||
     databaseUrl.includes('neon.tech') ||
     databaseUrl.includes('railway') ||
     databaseUrl.includes('rlwy.net') ||
+    databaseUrl.includes('render.com') ||
+    databaseUrl.includes('.dpg-') ||
     process.env.DB_SSL === 'true'
   )) ? { rejectUnauthorized: false } : undefined,
 });
