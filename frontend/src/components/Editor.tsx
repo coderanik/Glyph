@@ -29,19 +29,28 @@ export default function Editor({
   const viewRef = useRef<EditorView | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const onChangeRef = useRef(onChange);
+  const onConnectionStatusChangeRef = useRef(onConnectionStatusChange);
+  // Seed only — do not put live document text in the effect deps (that remounts on every keystroke).
+  const initialContentRef = useRef(initialContent);
+  initialContentRef.current = initialContent;
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
   useEffect(() => {
+    onConnectionStatusChangeRef.current = onConnectionStatusChange;
+  }, [onConnectionStatusChange]);
+
+  useEffect(() => {
     if (!editorRef.current) return;
 
     let cancelled = false;
+    const seedContent = initialContentRef.current || "";
 
     // Basic Yjs document and awareness
     const ydoc = new Y.Doc();
-    
+
     // y-websocket URL = serverUrl + "/" + roomname (see y-websocket.js). Backend route is /ws/:file_id (UUID).
     const serverUrl = (
       process.env.NEXT_PUBLIC_WS_URL ?? WS_BASE
@@ -54,7 +63,7 @@ export default function Editor({
       { connect: false, disableBc: true }
     );
     providerRef.current = provider;
-    
+
     const ytext = ydoc.getText("codemirror");
 
     const onYjsChange = () => {
@@ -86,8 +95,8 @@ export default function Editor({
     }
 
     const state = EditorState.create({
-      doc: initialContent || ytext.toString(),
-      extensions
+      doc: seedContent || ytext.toString(),
+      extensions,
     });
 
     const view = new EditorView({
@@ -101,20 +110,30 @@ export default function Editor({
 
     // Initial content notify
     if (onChangeRef.current) {
-      onChangeRef.current(initialContent || ytext.toString());
+      onChangeRef.current(seedContent || ytext.toString());
     }
 
     const onStatusChange = ({ status }: { status: string }) => {
-      if (onConnectionStatusChange) {
-        onConnectionStatusChange(status === "connected");
+      if (onConnectionStatusChangeRef.current) {
+        onConnectionStatusChangeRef.current(status === "connected");
       }
     };
     provider.on("status", onStatusChange);
 
     provider.on("sync", (isSynced: boolean) => {
       if (isSynced && !cancelled) {
+        // Seed remote empty docs so first open of a new file keeps local content
+        if (ytext.length === 0) {
+          const local = view.state.doc.toString();
+          const toSeed = local || seedContent;
+          if (toSeed) {
+            ydoc.transact(() => {
+              ytext.insert(0, toSeed);
+            });
+          }
+        }
         view.dispatch({
-          effects: collabCompartment.reconfigure(yCollab(ytext, provider.awareness))
+          effects: collabCompartment.reconfigure(yCollab(ytext, provider.awareness)),
         });
       }
     });
@@ -136,7 +155,8 @@ export default function Editor({
       }
       provider.destroy();
     };
-  }, [fileId, initialContent, readOnly, editorViewRef, onConnectionStatusChange]);
+    // Only remount when switching files or read-only mode — never on content edits
+  }, [fileId, readOnly, editorViewRef]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }
