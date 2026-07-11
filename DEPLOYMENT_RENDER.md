@@ -1,27 +1,26 @@
 # Deploying Glyph to Render
 
-Railway trial paused? Run the backend stack on [Render](https://render.com). Keep the Next.js frontend on **Vercel**.
+Railway trial paused? Run the backend on [Render](https://render.com). Keep the Next.js frontend on **Vercel**.
 
 ```
 [ Vercel: Next.js ] ──HTTP/WS──> [ Render: glyph-api ]
                                         │
-                                  [ glyph-db Postgres ]
+                                  (also polls compile queue
+                                   + runs latexmk in-process)
                                         │
-                              [ glyph-worker / latexmk ]
+                                  [ glyph-db Postgres ]
 ```
+
+There is **no separate compile worker**. The API image includes TeX Live + `latexmk` and runs the job poller inside the same process.
 
 ## What’s in `render.yaml`
 
 | Resource | Type | Notes |
 |---|---|---|
-| `glyph-db` | Postgres (`free`) | Shared by API (+ worker when enabled) |
-| `glyph-api` | Web (Docker `server/Dockerfile`) | REST + Yjs WebSockets — live at `https://glyph-api-df89.onrender.com` |
+| `glyph-db` | Postgres (`free`) | App data + compile job queue |
+| `glyph-api` | Web (Docker `server/Dockerfile`) | REST, Yjs WebSockets, **and** LaTeX compile |
 
-### Compile worker (paid)
-
-`glyph-worker` needs a **Starter** (or higher) background worker with `server/Dockerfile.worker` (`texlive-full`). Render returns `need_payment_info` on free accounts — add a payment method, then create the worker from the Dashboard or re-add it to `render.yaml`.
-
-Frontend is **not** on Render — use Vercel (`frontend/vercel.json`).
+Optional: `server/Dockerfile.worker` still exists if you later want a dedicated worker.
 
 ## Current provisioned resources
 
@@ -30,19 +29,21 @@ Frontend is **not** on Render — use Vercel (`frontend/vercel.json`).
 | Postgres `glyph-db` | https://dashboard.render.com/d/dpg-d997rj0k1i2s73dq0t4g-a |
 | Web `glyph-api` | https://dashboard.render.com/web/srv-d997rkucjfls73fs4r30 |
 
-## 1. Push & deploy the API
+API URL: **https://glyph-api-df89.onrender.com**
 
-`glyph-api` is already linked to `main` with auto-deploy. Push Docker/env fixes, then:
+## 1. Deploy the API
+
+`glyph-api` auto-deploys from `main`. After TeX-in-API changes:
 
 ```bash
 render deploys create srv-d997rkucjfls73fs4r30 --confirm
 ```
 
-Or use [New → Blueprint](https://dashboard.render.com/blueprints/new) with `render.yaml` for greenfield setups.
+First build installs TeX packages — expect a longer Docker build.
 
 ## 2. Point the frontend at the API
 
-In the **Vercel** project env vars:
+In **Vercel** env vars:
 
 ```
 NEXT_PUBLIC_API_URL=https://glyph-api-df89.onrender.com
@@ -54,9 +55,9 @@ Redeploy the frontend so `NEXT_PUBLIC_*` values are baked in.
 
 ## 3. Clerk allowlists
 
-In the Clerk dashboard, add:
+Add:
 
-- Vercel frontend origin
+- Your Vercel frontend origin
 - `https://glyph-api-df89.onrender.com`
 
 ## 4. Verify
@@ -66,11 +67,11 @@ curl https://glyph-api-df89.onrender.com/
 # → Backend is running!
 ```
 
-Then open the Vercel app. Compiles need `glyph-worker` Live (see paid note above).
+Then open the app and hit **Compile** — the API should pick up the queued job.
 
 ## Notes
 
-- **Free web** services spin down after idle — first request / WebSocket reconnect can be slow.
-- **Worker image** installs `texlive-full` — first Docker build is large/slow; needs a paid worker plan.
-- `DB_SSL` is set; `server/src/config/db.ts` also detects `render.com` hostnames.
-- Render injects `PORT` automatically — the API binds `0.0.0.0:$PORT`.
+- Free web services **spin down** when idle; first request / compile after sleep is slow.
+- The TeX scheme is medium (`latex-extra` + `science`, not `texlive-full`). Exotic packages may need Dockerfile additions.
+- Set `DISABLE_INLINE_COMPILER=true` only if you run a standalone worker again.
+- Render injects `PORT`; the API binds `0.0.0.0:$PORT`.
