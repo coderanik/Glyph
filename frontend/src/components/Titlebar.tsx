@@ -9,6 +9,8 @@ type TitlebarProps = {
   isCompiling: boolean;
   onCompile: () => void;
   canCompile: boolean;
+  autoCompile?: boolean;
+  onAutoCompileToggle?: () => void;
   theme?: "light" | "dark";
   onThemeToggle?: () => void;
   collaborators?: { id: string; name: string; initials: string; color: string; online: boolean; imageUrl: string | null }[];
@@ -40,6 +42,8 @@ export default function Titlebar({
   isCompiling,
   onCompile,
   canCompile,
+  autoCompile = false,
+  onAutoCompileToggle,
   theme,
   onThemeToggle,
   collaborators = [],
@@ -89,6 +93,31 @@ export default function Titlebar({
             </div>
           ))}
         </div>
+
+        {/* Auto-compile toggle */}
+        {onAutoCompileToggle && canCompile && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoCompile}
+            onClick={onAutoCompileToggle}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border border-border-primary text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer select-none"
+            title={autoCompile ? "Auto-compile on — click to turn off" : "Auto-compile off — click to turn on"}
+          >
+            <span
+              className={`relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full transition-colors ${
+                autoCompile ? "bg-accent" : "bg-bg-tertiary"
+              }`}
+            >
+              <span
+                className={`absolute h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform ${
+                  autoCompile ? "translate-x-3" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+            <span>Auto</span>
+          </button>
+        )}
 
         {/* Compile button */}
         <button
