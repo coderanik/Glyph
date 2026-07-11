@@ -3,6 +3,7 @@ import { query } from './config/db.js';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -162,9 +163,9 @@ export async function pollQueue() {
   return false; // No job found or error
 }
 
-async function startWorker() {
-  console.log('🤖 Compile worker sidecar started, testing database connection...');
-  
+export async function startCompileWorker() {
+  console.log('🤖 In-process compile worker started, testing database connection...');
+
   // Verify database connectivity on startup
   try {
     await query('SELECT 1');
@@ -186,6 +187,12 @@ async function startWorker() {
   }
 }
 
-if (process.env.NODE_ENV !== 'test') {
-  startWorker();
+// Only auto-start when this file is the process entrypoint (standalone worker).
+// The API imports startCompileWorker and runs it in-process instead.
+const isMain =
+  typeof process.argv[1] === 'string' &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (process.env.NODE_ENV !== 'test' && isMain) {
+  startCompileWorker();
 }
