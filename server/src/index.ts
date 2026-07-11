@@ -89,9 +89,10 @@ import { setupWSConnection } from './config/yjsServer.js'
 if (process.env.NODE_ENV !== 'test') {
   const server = serve({
     fetch: app.fetch,
-    port
+    port,
+    hostname: "0.0.0.0",
   }, (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`)
+    console.log(`Server is running on http://0.0.0.0:${info.port}`)
   })
 
   interface ExtWebSocket extends WebSocket {
