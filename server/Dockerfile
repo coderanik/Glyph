@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-bookworm AS builder
 
 WORKDIR /app
 
@@ -16,11 +16,24 @@ COPY server ./server
 # Build the TypeScript project
 RUN npm run build -w server
 
-# Production stage
-FROM node:20-alpine
+# Production stage — API + in-process LaTeX compile (no separate worker needed)
+FROM node:20-bookworm-slim
+
+# TeX Live scheme large enough for typical papers without shipping texlive-full (~multi-GB)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    texlive-latex-base \
+    texlive-latex-recommended \
+    texlive-fonts-recommended \
+    texlive-latex-extra \
+    texlive-science \
+    texlive-pictures \
+    texlive-bibtex-extra \
+    biber \
+    latexmk \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
 
 # Copy package configuration and built output
 COPY --from=builder /app/package.json /app/package-lock.json ./
