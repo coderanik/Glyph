@@ -32,6 +32,16 @@ export default function ProjectEditorPage({
   const [fileId, setFileId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
+  // Compilation state (declared before effects that sync refs)
+  const [isCompiling, startCompileTransition] = useTransition();
+  const [pdfUrl, setPdfUrlState] = useState<string | null>(null);
+  const pdfBlobUrlRef = useRef<string | null>(null);
+  const [autoCompile, setAutoCompile] = useState(false);
+  const autoCompileRef = useRef(false);
+  const isCompilingRef = useRef(false);
+  const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCompileRef = useRef<() => void>(() => {});
+
   // Load theme + auto-compile preference from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem("glyph-theme");
@@ -68,16 +78,6 @@ export default function ProjectEditorPage({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarTab, setSidebarTab] = useState(0); // 0: Files, 1: Outline
   const [activeActivityItem, setActiveActivityItem] = useState(0); // 0: Explorer
-
-  // Compilation state
-  const [isCompiling, startCompileTransition] = useTransition();
-  const [pdfUrl, setPdfUrlState] = useState<string | null>(null);
-  const pdfBlobUrlRef = useRef<string | null>(null);
-  const [autoCompile, setAutoCompile] = useState(false);
-  const autoCompileRef = useRef(false);
-  const isCompilingRef = useRef(false);
-  const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleCompileRef = useRef<() => void>(() => {});
 
   const setPdfUrl = (url: string | null) => {
     if (pdfBlobUrlRef.current) {
