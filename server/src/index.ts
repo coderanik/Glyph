@@ -85,6 +85,7 @@ if (process.env.PORT) {
 
 import { WebSocket, WebSocketServer } from 'ws'
 import { setupWSConnection } from './config/yjsServer.js'
+import { startCompileWorker } from './compileWorker.js'
 
 if (process.env.NODE_ENV !== 'test') {
   const server = serve({
@@ -128,6 +129,14 @@ if (process.env.NODE_ENV !== 'test') {
   wss.on('close', () => {
     clearInterval(interval)
   })
+
+  // Poll compilation_jobs in this process so a separate Render worker is optional
+  if (process.env.DISABLE_INLINE_COMPILER !== 'true') {
+    void startCompileWorker().catch((err) => {
+      console.error('Fatal: in-process compile worker crashed:', err)
+      process.exit(1)
+    })
+  }
 }
 
 // Trigger hot reload
