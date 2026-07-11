@@ -32,13 +32,36 @@ export default function ProjectEditorPage({
   const [fileId, setFileId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Load theme from localStorage on mount
+  // Load theme + auto-compile preference from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem("glyph-theme");
     if (savedTheme === "light" || savedTheme === "dark") {
       const t = setTimeout(() => setTheme(savedTheme), 0);
       return () => clearTimeout(t);
     }
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("glyph-auto-compile");
+    if (saved === "true") {
+      const t = setTimeout(() => {
+        setAutoCompile(true);
+        autoCompileRef.current = true;
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  useEffect(() => {
+    isCompilingRef.current = isCompiling;
+  }, [isCompiling]);
+
+  useEffect(() => {
+    return () => {
+      if (autoCompileTimerRef.current) {
+        clearTimeout(autoCompileTimerRef.current);
+      }
+    };
   }, []);
   
   // UI Panels state
@@ -50,6 +73,11 @@ export default function ProjectEditorPage({
   const [isCompiling, startCompileTransition] = useTransition();
   const [pdfUrl, setPdfUrlState] = useState<string | null>(null);
   const pdfBlobUrlRef = useRef<string | null>(null);
+  const [autoCompile, setAutoCompile] = useState(false);
+  const autoCompileRef = useRef(false);
+  const isCompilingRef = useRef(false);
+  const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCompileRef = useRef<() => void>(() => {});
 
   const setPdfUrl = (url: string | null) => {
     if (pdfBlobUrlRef.current) {
@@ -260,6 +288,7 @@ export default function ProjectEditorPage({
 
   const handleCompile = () => {
     if (userRole === "read") return;
+    if (isCompilingRef.current) return;
     startCompileTransition(async () => {
       setCompileStatus("Starting compilation...");
       try {
@@ -292,6 +321,23 @@ export default function ProjectEditorPage({
         setCompileStatus(err instanceof Error ? err.message : "Failed");
       }
     });
+  };
+  handleCompileRef.current = handleCompile;
+
+  const scheduleAutoCompile = () => {
+    if (!autoCompileRef.current || userRole === "read") return;
+    if (autoCompileTimerRef.current) {
+      clearTimeout(autoCompileTimerRef.current);
+    }
+    // Debounce so typing doesn't spam the compile worker; also waits for Yjs save debounce
+    autoCompileTimerRef.current = setTimeout(() => {
+      if (isCompilingRef.current) {
+        // Still compiling — retry after it finishes
+        scheduleAutoCompile();
+        return;
+      }
+      handleCompileRef.current();
+    }, 2500);
   };
 
   const handleDownloadPdf = async () => {
@@ -345,6 +391,8 @@ export default function ProjectEditorPage({
     // Count words in LaTeX code
     const words = code.trim().split(/\s+/).filter((w) => w.length > 0).length;
     setWordCount(words);
+
+    scheduleAutoCompile();
   };
 
   const handleFileCreate = async () => {
@@ -421,6 +469,19 @@ export default function ProjectEditorPage({
         isCompiling={isCompiling}
         onCompile={handleCompile}
         canCompile={userRole !== "read"}
+        autoCompile={autoCompile}
+        onAutoCompileToggle={() => {
+          setAutoCompile((prev) => {
+            const next = !prev;
+            autoCompileRef.current = next;
+            localStorage.setItem("glyph-auto-compile", String(next));
+            if (!next && autoCompileTimerRef.current) {
+              clearTimeout(autoCompileTimerRef.current);
+              autoCompileTimerRef.current = null;
+            }
+            return next;
+          });
+        }}
         theme={theme}
         onThemeToggle={() => {
           setTheme((t) => {
