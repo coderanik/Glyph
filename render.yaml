@@ -1,0 +1,38 @@
+# Glyph on Render — API + Postgres (+ optional compile worker)
+# Frontend stays on Vercel. After deploy set:
+#   NEXT_PUBLIC_API_URL=https://glyph-api-df89.onrender.com
+#
+# Worker requires a paid plan / payment method on Render (not creatable on free).
+
+databases:
+  - name: glyph-db
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: glyph-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: glyph-db
+          property: connectionString
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
