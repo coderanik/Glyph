@@ -101,7 +101,49 @@
   color: #111827;
 }
 
-/* White CodeMirror editing surface */
+/* White CodeMirror editing surface — always light, even in dark workspace */
+.editor-workspace .cm-editor {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+.editor-workspace .cm-editor.cm-focused {
+  outline: none;
+}
+.editor-workspace .cm-content {
+  color: #1e293b !important;
+  caret-color: #111827;
+}
+.editor-workspace .cm-gutters,
+.editor-workspace .cm-gutter {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.editor-workspace .cm-activeLine {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+.editor-workspace .cm-activeLineGutter {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #64748b !important;
+}
+.editor-workspace .cm-selectionBackground,
+.editor-workspace .cm-content ::selection {
+  background: rgba(5, 150, 105, 0.2) !important;
+}
+.editor-workspace .cm-cursor {
+  border-left-color: #111827 !important;
+}
+.editor-workspace .cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  background: #ffffff !important;
+}
+
+/* Editor pane wrapper stays white behind CodeMirror */
+.editor-workspace main > div:first-child {
+  background: #ffffff !important;
+}
+
 .editor-workspace.light .cm-editor {
   background: #ffffff !important;
   color: #1e293b !important;
@@ -215,28 +257,23 @@
   border-color: rgba(110, 231, 183, 0.03) !important;
 }
 
+/* Keep the LaTeX source pane white in dark mode */
+.editor-workspace.dark main > div:first-child {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .editor-workspace.dark main > div > div.h-7 {
   background: rgba(21, 23, 26, 0.45) !important;
   border-bottom: 1px solid rgba(110, 231, 183, 0.04) !important;
 }
 
-.editor-workspace.dark .cm-editor {
-  background: transparent !important;
-  color: #e5e5e7 !important;
-}
-.editor-workspace.dark .cm-content {
-  color: #e5e5e7 !important;
-  caret-color: #f1f5f9;
-}
-.editor-workspace.dark .cm-gutters,
-.editor-workspace.dark .cm-gutter {
-  background: rgba(15, 17, 20, 0.25) !important;
-  color: #63636e !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
-}
-.editor-workspace.dark .cm-scroller {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+/* Pane header over the white editor */
+.editor-workspace.dark main > div:first-child > div.h-7 {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #111827;
 }
 
 .editor-workspace.dark .bg-bg-tertiary {
