@@ -701,11 +701,6 @@ Start writing your LaTeX document here...
             >
               {theme === "light" ? <IconMoon size={14} /> : <IconSun size={14} />}
             </button>
-            <Link href="/settings" style={{ display: "flex" }}>
-              <button className="dash-icon-btn" aria-label="Settings" title="Settings">
-                <IconSettings size={16} />
-              </button>
-            </Link>
             <div style={{ display: "flex", alignItems: "center" }}>
               {isLoaded && user ? (
                 <UserButton />
