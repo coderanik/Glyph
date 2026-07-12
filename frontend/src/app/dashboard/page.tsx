@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -175,6 +175,23 @@ function IconBriefcase({ size = 16 }: { size?: number }) {
 }
 
 
+function IconSun({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <circle cx="8" cy="8" r="3" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" />
+    </svg>
+  );
+}
+
+function IconMoon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13.5 8.5A5.5 5.5 0 117.5 2.5a4 4 0 006 6z" />
+    </svg>
+  );
+}
+
 /* ── Nav items ── */
 const NAV_ITEMS = [
   { icon: IconGrid, label: "All projects", id: "all" },
@@ -184,10 +201,7 @@ const NAV_ITEMS = [
   { icon: IconTrash, label: "Trash", id: "trash" },
 ];
 
-const TAG_ITEMS = [
-  { label: "Research" },
-  { label: "Coursework" },
-];
+const DEFAULT_TAGS = ["Research", "Coursework"];
 
 /* ── Component ── */
 export default function DashboardPage() {
@@ -195,11 +209,14 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
   
-  const theme = "dark";
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [activeNav, setActiveNav] = useState("all");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [customTags, setCustomTags] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   type ProjectData = {
     id: string;
@@ -208,6 +225,9 @@ export default function DashboardPage() {
     ownerName?: string;
     ownerFirstName?: string;
     createdAt: string;
+    tags?: string[];
+    archivedAt?: string | null;
+    deletedAt?: string | null;
   };
   const [projectsList, setProjectsList] = useState<ProjectData[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
@@ -216,10 +236,45 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectType, setProjectType] = useState("empty");
   const [projectName, setProjectName] = useState("Untitled Project");
+  const [projectTags, setProjectTags] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Default theme is locked to dark mode
+  // Theme + custom tags from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("glyph-theme");
+    if (savedTheme === "light" || savedTheme === "dark") {
+      const t = setTimeout(() => setTheme(savedTheme), 0);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("glyph-custom-tags");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const t = setTimeout(() => setCustomTags(parsed.filter((x): x is string => typeof x === "string")), 0);
+          return () => clearTimeout(t);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const persistCustomTags = (tags: string[]) => {
+    setCustomTags(tags);
+    localStorage.setItem("glyph-custom-tags", JSON.stringify(tags));
+  };
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "light" ? "dark" : "light";
+      localStorage.setItem("glyph-theme", next);
+      return next;
+    });
+  };
   // Fetch real projects from DB
   const loadProjectsFromDb = useCallback(async () => {
     try {
@@ -250,21 +305,39 @@ export default function DashboardPage() {
 
   const filteredProjects = useMemo(() => {
     let list = projectsList;
-    if (activeNav === "yours") {
-      list = projectsList.filter((p) => p.role === "owner");
-    } else if (activeNav === "shared") {
-      list = projectsList.filter((p) => p.role !== "owner");
-    } else if (activeNav === "archived") {
-      list = [];
+
+    if (activeNav === "archived") {
+      list = list.filter((p) => p.archivedAt && !p.deletedAt);
     } else if (activeNav === "trash") {
-      list = [];
+      list = list.filter((p) => !!p.deletedAt);
+    } else {
+      list = list.filter((p) => !p.deletedAt && !p.archivedAt);
+      if (activeNav === "yours") {
+        list = list.filter((p) => p.role === "owner");
+      } else if (activeNav === "shared") {
+        list = list.filter((p) => p.role !== "owner");
+      }
+    }
+
+    if (activeTag) {
+      list = list.filter((p) => (p.tags || []).includes(activeTag));
     }
 
     const q = search.toLowerCase();
     return list.filter((p) => p.name.toLowerCase().includes(q));
-  }, [search, projectsList, activeNav]);
+  }, [search, projectsList, activeNav, activeTag]);
 
+  const allTags = useMemo(() => {
+    const fromProjects = projectsList.flatMap((p) => p.tags || []);
+    return [...new Set([...DEFAULT_TAGS, ...customTags, ...fromProjects])].sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [projectsList, customTags]);
 
+  // Keep header checkbox in sync when the visible list changes
+  useEffect(() => {
+    setSelectAll(filteredProjects.length > 0 && filteredProjects.every((p) => selected.has(p.id)));
+  }, [filteredProjects, selected]);
 
   const handleSelectAll = () => {
     if (selectAll) {
@@ -272,7 +345,6 @@ export default function DashboardPage() {
     } else {
       setSelected(new Set(filteredProjects.map((p) => p.id)));
     }
-    setSelectAll(!selectAll);
   };
 
   const handleSelectRow = (id: string) => {
@@ -283,7 +355,90 @@ export default function DashboardPage() {
       next.add(id);
     }
     setSelected(next);
-    setSelectAll(next.size === filteredProjects.length);
+  };
+
+  const clearSelection = () => {
+    setSelected(new Set());
+  };
+
+  const runBulkAction = async (action: "archive" | "unarchive" | "delete" | "restore" | "permanentDelete") => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+
+    const labels: Record<string, string> = {
+      archive: "archive",
+      unarchive: "unarchive",
+      delete: "move to trash",
+      restore: "restore",
+      permanentDelete: "permanently delete",
+    };
+    if (!confirm(`Are you sure you want to ${labels[action]} ${ids.length} project(s)?`)) return;
+
+    setBulkBusy(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(apiUrl("/projects/bulk"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, ids }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Bulk action failed");
+      }
+      clearSelection();
+      await loadProjectsFromDb();
+    } catch (err) {
+      logError("Bulk action failed:", err);
+      alert(err instanceof Error ? err.message : "Bulk action failed");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleDeleteOne = async (id: string, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Move this project to trash?")) return;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(apiUrl(`/projects/${id}`), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      await loadProjectsFromDb();
+    } catch (err) {
+      logError("Delete failed:", err);
+      alert("Failed to delete project");
+    }
+  };
+
+  const handleNewTag = () => {
+    const name = prompt("New tag name:");
+    if (!name?.trim()) return;
+    const label = name.trim().slice(0, 40);
+    if (!allTags.includes(label)) {
+      persistCustomTags([...customTags, label]);
+    }
+    setActiveTag(label);
+    setActiveNav("all");
+  };
+
+  const toggleProjectTag = (tag: string) => {
+    setProjectTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   // Create Project handler
@@ -295,14 +450,14 @@ export default function DashboardPage() {
       const token = await getToken();
       if (!token) return;
 
-      // 1. Create project metadata
+      // 1. Create project metadata (optional tags)
       const res = await fetch(apiUrl("/projects"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: projectName }),
+        body: JSON.stringify({ name: projectName, tags: projectTags }),
       });
 
       if (!res.ok) throw new Error("Could not create project");
@@ -343,6 +498,7 @@ Start writing your LaTeX document here...
     } finally {
       setIsCreating(false);
       setIsModalOpen(false);
+      setProjectTags([]);
     }
   };
 
@@ -374,6 +530,7 @@ Start writing your LaTeX document here...
             onClick={() => {
               setProjectName("Untitled LaTeX Project");
               setProjectType("empty");
+              setProjectTags([]);
               setIsModalOpen(true);
             }}
           >
@@ -386,8 +543,12 @@ Start writing your LaTeX document here...
           {NAV_ITEMS.map((item) => (
             <div
               key={item.id}
-              className={`dash-nav-item ${activeNav === item.id ? "active" : ""}`}
-              onClick={() => setActiveNav(item.id)}
+              className={`dash-nav-item ${activeNav === item.id && !activeTag ? "active" : ""}`}
+              onClick={() => {
+                setActiveNav(item.id);
+                setActiveTag(null);
+                clearSelection();
+              }}
             >
               <item.icon size={17} />
               {item.label}
@@ -397,19 +558,31 @@ Start writing your LaTeX document here...
 
         <div className="dash-nav-section">
           <div className="dash-nav-label">Tags</div>
-          {TAG_ITEMS.map((tag) => (
-            <div key={tag.label} className="dash-nav-item">
+          {allTags.map((tag) => (
+            <div
+              key={tag}
+              className={`dash-nav-item ${activeTag === tag ? "active" : ""}`}
+              onClick={() => {
+                setActiveTag(tag);
+                setActiveNav("all");
+                clearSelection();
+              }}
+            >
               <IconTag size={17} />
-              {tag.label}
+              {tag}
             </div>
           ))}
-          <div className="dash-nav-item dash-nav-item-muted">
+          <div className="dash-nav-item dash-nav-item-muted" onClick={handleNewTag}>
             <IconPlus size={17} />
             New tag
           </div>
         </div>
 
         <div className="dash-sidebar-footer">
+          <Link href="/settings" className="dash-nav-item dash-settings-link">
+            <IconSettings size={17} />
+            Settings
+          </Link>
           <div className="flex items-center justify-between text-[10px] font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider">
             <span>Version</span>
             <span>v0.1.0</span>
@@ -422,12 +595,91 @@ Start writing your LaTeX document here...
         <div className="dash-topbar">
           <div className="dash-topbar-left">
             <span className="dash-topbar-title">
-              {activeNav === "all" && "All projects"}
-              {activeNav === "yours" && "Your projects"}
-              {activeNav === "shared" && "Shared with you"}
-              {activeNav === "archived" && "Archived"}
-              {activeNav === "trash" && "Trash"}
+              {activeTag
+                ? `Tag: ${activeTag}`
+                : activeNav === "all"
+                ? "All projects"
+                : activeNav === "yours"
+                ? "Your projects"
+                : activeNav === "shared"
+                ? "Shared with you"
+                : activeNav === "archived"
+                ? "Archived"
+                : "Trash"}
             </span>
+            {selected.size > 0 && (
+              <div className="dash-bulk-bar">
+                <span className="dash-bulk-count">{selected.size} selected</span>
+                {activeNav === "trash" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("restore")}
+                    >
+                      Restore all
+                    </button>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn dash-bulk-btn-danger"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("permanentDelete")}
+                    >
+                      Delete forever
+                    </button>
+                  </>
+                ) : activeNav === "archived" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("unarchive")}
+                    >
+                      Unarchive all
+                    </button>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn dash-bulk-btn-danger"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("delete")}
+                    >
+                      Delete all
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("archive")}
+                    >
+                      <IconArchive size={14} />
+                      Archive all
+                    </button>
+                    <button
+                      type="button"
+                      className="dash-bulk-btn dash-bulk-btn-danger"
+                      disabled={bulkBusy}
+                      onClick={() => runBulkAction("delete")}
+                    >
+                      <IconTrashSmall size={14} />
+                      Delete all
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="dash-bulk-btn dash-bulk-btn-ghost"
+                  disabled={bulkBusy}
+                  onClick={clearSelection}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
           <div className="dash-topbar-right">
             <div className="dash-search-wrap">
@@ -440,6 +692,15 @@ Start writing your LaTeX document here...
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <button
+              type="button"
+              className="dash-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+              title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            >
+              {theme === "light" ? <IconMoon size={14} /> : <IconSun size={14} />}
+            </button>
             <Link href="/settings" style={{ display: "flex" }}>
               <button className="dash-icon-btn" aria-label="Settings" title="Settings">
                 <IconSettings size={16} />
@@ -468,14 +729,18 @@ Start writing your LaTeX document here...
                   <IconFile size={22} />
                 </div>
                 <p className="dash-empty-title">
-                  {activeNav === "archived"
+                  {activeTag
+                    ? `No projects tagged “${activeTag}”`
+                    : activeNav === "archived"
                     ? "No Archived Projects"
                     : activeNav === "trash"
                     ? "Trash is Empty"
                     : "No Projects Found"}
                 </p>
                 <p className="dash-empty-desc">
-                  {activeNav === "archived"
+                  {activeTag
+                    ? "Create a project and assign this tag to see it here."
+                    : activeNav === "archived"
                     ? "Archived documents will appear here."
                     : activeNav === "trash"
                     ? "Trash items are cleaned up automatically."
@@ -487,6 +752,7 @@ Start writing your LaTeX document here...
                     onClick={() => {
                       setProjectName("Untitled LaTeX Project");
                       setProjectType("empty");
+                      setProjectTags([]);
                       setIsModalOpen(true);
                     }}
                   >
@@ -536,6 +802,12 @@ Start writing your LaTeX document here...
                               <div className="dash-td-name font-medium">{project.name}</div>
                               <div className="dash-td-meta">
                                 main.tex
+                                {(project.tags || []).length > 0 && (
+                                  <span className="dash-td-tags">
+                                    {" · "}
+                                    {(project.tags || []).join(", ")}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -574,7 +846,11 @@ Start writing your LaTeX document here...
                           <button className="dash-icon-btn" aria-label="Share">
                             <IconShare size={15} />
                           </button>
-                          <button className="dash-icon-btn" aria-label="Delete">
+                          <button
+                            className="dash-icon-btn"
+                            aria-label="Delete"
+                            onClick={(e) => handleDeleteOne(project.id, e)}
+                          >
                             <IconTrashSmall size={15} />
                           </button>
                         </div>
@@ -586,9 +862,11 @@ Start writing your LaTeX document here...
             )}
             {!isProjectsLoading && (
               <div className="dash-footer-count">
-                {search
-                  ? `Showing ${filteredProjects.length} of ${projectsList.length} projects`
-                  : `Showing ${projectsList.length} of ${projectsList.length} projects`}
+                {`Showing ${filteredProjects.length} of ${projectsList.filter((p) => {
+                  if (activeNav === "trash") return !!p.deletedAt;
+                  if (activeNav === "archived") return !!p.archivedAt && !p.deletedAt;
+                  return !p.deletedAt && !p.archivedAt;
+                }).length} projects`}
               </div>
             )}
           </div>
@@ -655,19 +933,38 @@ Start writing your LaTeX document here...
               </div>
             </div>
 
-            {/* Step 2: Name */}
+            {/* Step 2: Name + optional tags */}
             {projectType === "empty" && (
-              <div className="dash-modal-field">
-                <label className="dash-modal-label">Project Name</label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="Enter project name..."
-                  className="dash-modal-input"
-                  autoFocus
-                />
-              </div>
+              <>
+                <div className="dash-modal-field">
+                  <label className="dash-modal-label">Project Name</label>
+                  <input
+                    type="text"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Enter project name..."
+                    className="dash-modal-input"
+                    autoFocus
+                  />
+                </div>
+                <div className="dash-modal-field">
+                  <label className="dash-modal-label">
+                    Tags <span className="dash-modal-label-optional">(optional)</span>
+                  </label>
+                  <div className="dash-tag-picker">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className={`dash-tag-chip ${projectTags.includes(tag) ? "active" : ""}`}
+                        onClick={() => toggleProjectTag(tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Actions */}
