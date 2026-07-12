@@ -63,6 +63,11 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Soft-archive / soft-delete + tags for dashboard organization
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'`);
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE`);
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE`);
+
     // 2. Files Table (Store contents as TEXT)
     await client.query(`
       CREATE TABLE IF NOT EXISTS files (
