@@ -5,7 +5,7 @@
   height: 450px;
   border-radius: 50%;
   filter: blur(160px);
-  opacity: 0.15;
+  opacity: 0.12;
   pointer-events: none;
   z-index: 0;
 }
@@ -27,15 +27,153 @@
   100% { transform: translate(60px, 40px) scale(1.2); }
 }
 
-/* ── Glassmorphic Workspace Layout ── */
 .editor-workspace {
   position: relative;
-  background: radial-gradient(circle at top left, #0f1114, #0e0f11 50%, #0b110f 100%) !important;
   z-index: 1;
 }
 
-/* Header (Titlebar) */
-.editor-workspace header {
+/* ── Light workspace (white editor) ── */
+.editor-workspace.light {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f3f4f6;
+  --color-background-tertiary: #f8fafc;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #9ca3af;
+  --color-border-tertiary: #e5e7eb;
+  --color-border-secondary: #d1d5db;
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-bg: rgba(5, 150, 105, 0.08);
+  --color-accent-text: #047857;
+
+  background: radial-gradient(circle at top left, #f8fafc, #ffffff 45%, #f0fdf4 100%) !important;
+  color: #111827;
+}
+
+.editor-workspace.light .editor-glow-orb {
+  opacity: 0.08;
+  mix-blend-mode: multiply;
+}
+
+.editor-workspace.light header {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  position: relative;
+  z-index: 10;
+}
+
+.editor-workspace.light .w-11 {
+  background: rgba(248, 250, 252, 0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+  z-index: 10;
+}
+
+.editor-workspace.light .w-11 button:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.editor-workspace.light aside {
+  background: rgba(248, 250, 252, 0.9) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+  z-index: 9;
+}
+
+.editor-workspace.light main {
+  background: transparent !important;
+  z-index: 5;
+}
+
+.editor-workspace.light main > div {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.editor-workspace.light main > div > div.h-7 {
+  background: #f8fafc !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #111827;
+}
+
+/* White CodeMirror editing surface */
+.editor-workspace.light .cm-editor {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+.editor-workspace.light .cm-editor.cm-focused {
+  outline: none;
+}
+.editor-workspace.light .cm-content {
+  color: #1e293b !important;
+  caret-color: #111827;
+}
+.editor-workspace.light .cm-gutters,
+.editor-workspace.light .cm-gutter {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+.editor-workspace.light .cm-activeLine {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+.editor-workspace.light .cm-activeLineGutter {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #64748b !important;
+}
+.editor-workspace.light .cm-selectionBackground,
+.editor-workspace.light .cm-content ::selection {
+  background: rgba(5, 150, 105, 0.2) !important;
+}
+.editor-workspace.light .cm-cursor {
+  border-left-color: #111827 !important;
+}
+.editor-workspace.light .cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  background: #ffffff !important;
+}
+
+.editor-workspace.light .bg-bg-tertiary {
+  background: #f8fafc !important;
+}
+
+.editor-workspace.light iframe {
+  background: #ffffff !important;
+  border-radius: 8px;
+}
+
+.editor-workspace.light .pdf-mock-document {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 6px !important;
+}
+
+.editor-workspace.light footer {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.08) !important;
+  z-index: 10;
+}
+
+/* ── Dark workspace ── */
+.editor-workspace.dark {
+  background: radial-gradient(circle at top left, #0f1114, #0e0f11 50%, #0b110f 100%) !important;
+}
+
+.editor-workspace.dark .editor-glow-orb {
+  opacity: 0.16;
+  mix-blend-mode: screen;
+}
+
+.editor-workspace.dark header {
   background: rgba(21, 23, 26, 0.55) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
@@ -44,8 +182,7 @@
   z-index: 10;
 }
 
-/* Activity Bar */
-.editor-workspace .w-11 {
+.editor-workspace.dark .w-11 {
   background: rgba(14, 15, 17, 0.6) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
@@ -53,102 +190,97 @@
   z-index: 10;
 }
 
-.editor-workspace .w-11 button {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.editor-workspace .w-11 button:hover {
+.editor-workspace.dark .w-11 button:hover {
   background: rgba(255, 255, 255, 0.04);
   transform: translateY(-0.5px);
 }
 
-/* Explorer Sidebar */
-.editor-workspace aside {
+.editor-workspace.dark aside {
   background: rgba(15, 17, 20, 0.4) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-right: 1px solid rgba(110, 231, 183, 0.04) !important;
   z-index: 9;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Sidebar navigation tabs */
-.editor-workspace aside button {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Main workspace divider */
-.editor-workspace main {
+.editor-workspace.dark main {
   background: transparent !important;
   z-index: 5;
 }
 
-/* Code editor and PDF preview panel wrappers */
-.editor-workspace main > div {
+.editor-workspace.dark main > div {
   background: rgba(13, 14, 16, 0.3) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-color: rgba(110, 231, 183, 0.03) !important;
 }
 
-/* Pane Headers (LaTeX Source / Preview titles) */
-.editor-workspace main > div > div.h-7 {
+.editor-workspace.dark main > div > div.h-7 {
   background: rgba(21, 23, 26, 0.45) !important;
   border-bottom: 1px solid rgba(110, 231, 183, 0.04) !important;
 }
 
-/* CodeMirror Editor styles */
-.editor-workspace .cm-editor {
+.editor-workspace.dark .cm-editor {
   background: transparent !important;
+  color: #e5e5e7 !important;
 }
-.editor-workspace .cm-gutter {
+.editor-workspace.dark .cm-content {
+  color: #e5e5e7 !important;
+  caret-color: #f1f5f9;
+}
+.editor-workspace.dark .cm-gutters,
+.editor-workspace.dark .cm-gutter {
   background: rgba(15, 17, 20, 0.25) !important;
+  color: #63636e !important;
   border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
 }
-.editor-workspace .cm-scroller {
+.editor-workspace.dark .cm-scroller {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
-/* PDF Viewer pane custom styles */
-.editor-workspace .bg-bg-tertiary {
+.editor-workspace.dark .bg-bg-tertiary {
   background: transparent !important;
 }
 
-.editor-workspace iframe {
+.editor-workspace.dark iframe {
   background: rgba(18, 20, 24, 0.15) !important;
   border-radius: 8px;
 }
 
-/* Empty Compilation Preview PDF Mock Document card */
-.editor-workspace .pdf-mock-document {
+.editor-workspace.dark .pdf-mock-document {
   background: rgba(21, 23, 26, 0.45) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.04),
     0 16px 48px rgba(0, 0, 0, 0.45) !important;
   border-radius: 6px !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.editor-workspace .pdf-mock-document:hover {
+.editor-workspace.dark .pdf-mock-document:hover {
   transform: translateY(-2px) scale(1.005);
   border-color: rgba(110, 231, 183, 0.25) !important;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 2px rgba(255, 255, 255, 0.08),
     0 24px 64px rgba(0, 0, 0, 0.55),
     0 0 32px rgba(110, 231, 183, 0.04) !important;
 }
 
-/* Status Bar footer */
-.editor-workspace footer {
+.editor-workspace.dark footer {
   background: rgba(13, 14, 16, 0.8) !important;
   backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   border-top: 1px solid rgba(110, 231, 183, 0.06) !important;
   z-index: 10;
+}
+
+/* Shared transitions */
+.editor-workspace .w-11 button,
+.editor-workspace aside button {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ── Editor Loading Screen ── */
@@ -177,7 +309,7 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 20px;
   padding: 40px 60px;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.04),
     0 24px 64px rgba(0, 0, 0, 0.5);
   animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;

@@ -53,6 +53,13 @@ export default function ProjectEditorPage({
     }
   }, []);
 
+  // Keep <html> theme class in sync so Tailwind/CSS vars match the editor
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    root.classList.toggle("light", theme === "light");
+  }, [theme]);
+
   useEffect(() => {
     const saved = localStorage.getItem("glyph-auto-compile");
     if (saved === "true") {
