@@ -214,7 +214,6 @@ export default function DashboardPage() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -334,10 +333,8 @@ export default function DashboardPage() {
     );
   }, [projectsList, customTags]);
 
-  // Keep header checkbox in sync when the visible list changes
-  useEffect(() => {
-    setSelectAll(filteredProjects.length > 0 && filteredProjects.every((p) => selected.has(p.id)));
-  }, [filteredProjects, selected]);
+  const selectAll =
+    filteredProjects.length > 0 && filteredProjects.every((p) => selected.has(p.id));
 
   const handleSelectAll = () => {
     if (selectAll) {

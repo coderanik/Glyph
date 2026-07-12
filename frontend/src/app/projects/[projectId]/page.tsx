@@ -41,8 +41,10 @@ export default function ProjectEditorPage({
   const isCompilingRef = useRef(false);
   const autoCompileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleCompileRef = useRef<() => void>(() => {});
-  // Keep ref in sync during render (avoids TDZ issues with effect dependency arrays)
-  isCompilingRef.current = isCompiling;
+
+  useEffect(() => {
+    isCompilingRef.current = isCompiling;
+  }, [isCompiling]);
 
   // Load theme + auto-compile preference from localStorage on mount
   useEffect(() => {
@@ -327,7 +329,10 @@ export default function ProjectEditorPage({
       }
     });
   };
-  handleCompileRef.current = handleCompile;
+
+  useEffect(() => {
+    handleCompileRef.current = handleCompile;
+  });
 
   const scheduleAutoCompile = () => {
     if (!autoCompileRef.current || userRole === "read") return;

@@ -32,7 +32,10 @@ export default function Editor({
   const onConnectionStatusChangeRef = useRef(onConnectionStatusChange);
   // Seed only — do not put live document text in the effect deps (that remounts on every keystroke).
   const initialContentRef = useRef(initialContent);
-  initialContentRef.current = initialContent;
+
+  useEffect(() => {
+    initialContentRef.current = initialContent;
+  }, [initialContent]);
 
   useEffect(() => {
     onChangeRef.current = onChange;
