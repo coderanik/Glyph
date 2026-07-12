@@ -13,6 +13,9 @@ interface Project {
   role: string;
   ownerName?: string;
   ownerFirstName?: string;
+  tags?: string[];
+  archivedAt?: string | null;
+  deletedAt?: string | null;
 }
 
 interface Collaborator {
@@ -80,6 +83,9 @@ export async function getProjects(c: Context) {
   try {
     const result = await query(
       `SELECT p.id, p.name, p.owner_id AS "ownerId", p.created_at AS "createdAt",
+              COALESCE(p.tags, '{}') AS tags,
+              p.archived_at AS "archivedAt",
+              p.deleted_at AS "deletedAt",
               CASE WHEN p.owner_id = $1 THEN 'owner' ELSE pc.permission END AS "role"
        FROM projects p
        LEFT JOIN project_collaborators pc ON p.id = pc.project_id AND pc.user_id = $1
@@ -135,15 +141,132 @@ export async function createProject(c: Context) {
   try {
     const body = await c.req.json();
     const name = body.name || 'Untitled Project';
+    const rawTags: unknown[] = Array.isArray(body.tags) ? body.tags : [];
+    const tags = [...new Set(
+      rawTags
+        .filter((t): t is string => typeof t === 'string')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0 && t.length <= 40)
+    )].slice(0, 10);
 
     const result = await query(
-      'INSERT INTO projects (name, owner_id) VALUES ($1, $2) RETURNING id, name, owner_id AS "ownerId", created_at AS "createdAt"',
-      [name, userId]
+      `INSERT INTO projects (name, owner_id, tags)
+       VALUES ($1, $2, $3)
+       RETURNING id, name, owner_id AS "ownerId", created_at AS "createdAt",
+                 tags, archived_at AS "archivedAt", deleted_at AS "deletedAt"`,
+      [name, userId, tags]
     );
     
     return c.json(result.rows[0]);
   } catch (err) {
     console.error('Error creating project:', err);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
+  }
+}
+
+// POST /projects/bulk — archive | unarchive | delete | restore | permanentDelete
+export async function bulkProjectAction(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const body = await c.req.json();
+    const action = body.action as string;
+    const ids: string[] = Array.isArray(body.ids)
+      ? body.ids.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+
+    if (!ids.length) {
+      return c.json({ error: 'No project ids provided' }, 400);
+    }
+
+    const allowed = ['archive', 'unarchive', 'delete', 'restore', 'permanentDelete'] as const;
+    if (!allowed.includes(action as (typeof allowed)[number])) {
+      return c.json({ error: 'Invalid action' }, 400);
+    }
+
+    // Only owners can mutate lifecycle state
+    const owned = await query(
+      `SELECT id FROM projects WHERE owner_id = $1 AND id = ANY($2::uuid[])`,
+      [userId, ids]
+    );
+    const ownedIds = owned.rows.map((r: { id: string }) => r.id);
+    if (!ownedIds.length) {
+      return c.json({ error: 'No owned projects matched' }, 403);
+    }
+
+    let result;
+    if (action === 'archive') {
+      result = await query(
+        `UPDATE projects
+         SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
+         RETURNING id`,
+        [ownedIds]
+      );
+    } else if (action === 'unarchive') {
+      result = await query(
+        `UPDATE projects
+         SET archived_at = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
+         RETURNING id`,
+        [ownedIds]
+      );
+    } else if (action === 'delete') {
+      result = await query(
+        `UPDATE projects
+         SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ANY($1::uuid[])
+         RETURNING id`,
+        [ownedIds]
+      );
+    } else if (action === 'restore') {
+      result = await query(
+        `UPDATE projects
+         SET deleted_at = NULL, archived_at = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ANY($1::uuid[])
+         RETURNING id`,
+        [ownedIds]
+      );
+    } else {
+      // permanentDelete
+      result = await query(
+        `DELETE FROM projects WHERE id = ANY($1::uuid[]) RETURNING id`,
+        [ownedIds]
+      );
+    }
+
+    return c.json({ updated: result.rows.map((r: { id: string }) => r.id), action });
+  } catch (err) {
+    console.error('Error in bulk project action:', err);
+    return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
+  }
+}
+
+// DELETE /projects/:projectId — soft-delete (move to trash)
+export async function deleteProject(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const projectId = c.req.param('projectId');
+  if (!projectId) return c.json({ error: 'Project ID is required' }, 400);
+
+  try {
+    const result = await query(
+      `UPDATE projects
+       SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND owner_id = $2
+       RETURNING id`,
+      [projectId, userId]
+    );
+    if (result.rows.length === 0) {
+      return c.json({ error: 'Not found or forbidden' }, 404);
+    }
+    return c.json({ id: result.rows[0].id, deleted: true });
+  } catch (err) {
+    console.error('Error deleting project:', err);
     return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
   }
 }
