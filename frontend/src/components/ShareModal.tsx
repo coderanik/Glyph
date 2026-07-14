@@ -5,8 +5,6 @@ import { X, Copy, Check, ShieldAlert, Eye, Edit2 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { logError } from "@/lib/errorLogger";
 
-const MAX_COLLABORATORS = 3;
-
 type ShareModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -135,14 +133,6 @@ export default function ShareModal({
                     <div className="text-[10px] text-text-tertiary">Can view & preview only</div>
                   </button>
                 </div>
-              </div>
-
-              {/* Live Edit Note */}
-              <div className="p-2.5 bg-bg-secondary rounded-lg border border-border-secondary flex items-start gap-2">
-                <span className="text-xs">⚡</span>
-                <p className="text-[10px] text-text-secondary leading-relaxed">
-                  <strong>Free Tier limit:</strong> Live collaborative editing is supported for up to {MAX_COLLABORATORS} active collaborators.
-                </p>
               </div>
 
               {/* Action */}
