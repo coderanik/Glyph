@@ -238,14 +238,20 @@ export default function DashboardPage() {
   const [projectTags, setProjectTags] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Theme + custom tags from localStorage
+  // Theme + custom tags from localStorage (default: dark)
   useEffect(() => {
     const savedTheme = localStorage.getItem("glyph-theme");
     if (savedTheme === "light" || savedTheme === "dark") {
       const t = setTimeout(() => setTheme(savedTheme), 0);
       return () => clearTimeout(t);
     }
+    localStorage.setItem("glyph-theme", "dark");
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   useEffect(() => {
     try {

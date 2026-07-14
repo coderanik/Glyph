@@ -30,7 +30,7 @@ export default function ProjectEditorPage({
   // Project state
   const [projectName, setProjectName] = useState("Loading...");
   const [fileId, setFileId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   // Compilation state (declared before effects that sync refs)
   const [isCompiling, startCompileTransition] = useTransition();
@@ -53,6 +53,7 @@ export default function ProjectEditorPage({
       const t = setTimeout(() => setTheme(savedTheme), 0);
       return () => clearTimeout(t);
     }
+    localStorage.setItem("glyph-theme", "dark");
   }, []);
 
   // Keep <html> theme class in sync so Tailwind/CSS vars match the editor

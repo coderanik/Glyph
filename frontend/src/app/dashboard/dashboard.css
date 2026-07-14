@@ -1,21 +1,21 @@
 /* ── Design tokens ── */
 .dashboard {
-  /* Light mode (default) - Upgraded to Premium Light Glassmorphism */
+  /* Light mode — green accent (matches dark / product brand) */
   --color-background-primary: rgba(255, 255, 255, 0.65);
   --color-background-secondary: rgba(243, 244, 246, 0.45);
   --color-background-tertiary: #f5f7fa;
   --color-text-primary: #1e293b;
   --color-text-secondary: #475569;
   --color-text-tertiary: #94a3b8;
-  --color-border-tertiary: rgba(139, 92, 246, 0.08);
-  --color-border-secondary: rgba(139, 92, 246, 0.2);
-  --color-accent: #8b5cf6;
-  --color-accent-hover: #7c3aed;
-  --color-accent-bg: rgba(139, 92, 246, 0.06);
-  --color-accent-text: #7c3aed;
+  --color-border-tertiary: rgba(16, 185, 129, 0.1);
+  --color-border-secondary: rgba(16, 185, 129, 0.25);
+  --color-accent: #10b981;
+  --color-accent-hover: #059669;
+  --color-accent-bg: rgba(16, 185, 129, 0.08);
+  --color-accent-text: #047857;
   --border-radius-md: 10px;
   --border-radius-lg: 16px;
-  --shadow-sm: 0 4px 20px rgba(139, 92, 246, 0.04);
+  --shadow-sm: 0 4px 20px rgba(16, 185, 129, 0.06);
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), "SF Mono", monospace;
 
@@ -23,7 +23,7 @@
   height: 100vh;
   font-size: 13px;
   font-family: var(--font-sans);
-  background: radial-gradient(circle at top left, #f3e8ff, #f8fafc 40%, #e0f2fe 100%);
+  background: radial-gradient(circle at top left, #ecfdf5, #f8fafc 40%, #e0f2fe 100%);
   color: var(--color-text-primary);
   overflow: hidden;
   position: relative;
@@ -74,7 +74,7 @@
 }
 
 .dash-glow-orb.orb-purple {
-  background-color: #a78bfa;
+  background-color: #34d399;
   width: 280px;
   height: 280px;
   bottom: -60px;
@@ -125,7 +125,7 @@
 }
 
 .dash-logo:hover span {
-  background: linear-gradient(90deg, var(--color-accent), #a78bfa);
+  background: linear-gradient(90deg, var(--color-accent), #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
