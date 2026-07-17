@@ -86,6 +86,7 @@ export default function ShareModal({
           <button
             onClick={onClose}
             className="w-6 h-6 rounded-md flex items-center justify-center text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close share dialog"
           >
             <X size={14} />
           </button>
@@ -161,6 +162,7 @@ export default function ShareModal({
                   <button
                     onClick={handleCopy}
                     className="h-8 w-8 rounded-md border border-border-secondary flex items-center justify-center bg-bg-primary hover:bg-bg-secondary transition-colors cursor-pointer"
+                    aria-label={copied ? "Invitation link copied" : "Copy invitation link"}
                     title="Copy to clipboard"
                   >
                     {copied ? (

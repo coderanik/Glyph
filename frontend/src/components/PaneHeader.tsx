@@ -34,6 +34,7 @@ export default function PaneHeader({
           <button
             onClick={onDownload}
             className="w-5 h-5 rounded flex items-center justify-center text-text-secondary hover:bg-bg-primary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Download PDF"
             title="Download PDF"
           >
             <Download size={12} />

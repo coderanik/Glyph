@@ -270,6 +270,7 @@ export default function Sidebar({
                       <button
                         onClick={onFileCreate}
                         className="p-0.5 rounded hover:bg-bg-primary hover:text-text-primary transition-colors cursor-pointer"
+                        aria-label="Create new file"
                         title="Create new file"
                       >
                         <Plus size={10} />
@@ -609,6 +610,7 @@ function SidebarAiPanel({
         <button
           onClick={() => handleSend(input)}
           disabled={!input.trim() || isTyping}
+          aria-label="Send message"
           className="p-1.5 rounded bg-accent hover:bg-accent-hover disabled:bg-bg-tertiary disabled:text-text-tertiary text-[#0e0f11] transition-all cursor-pointer flex items-center justify-center shrink-0"
         >
           <Send size={13} />
