@@ -1,5 +1,5 @@
 "use client";
-
+import { CDN_URLS } from "@/lib/cdnUrls";
 import React, { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 
@@ -59,21 +59,21 @@ export default function LatexHtmlPreview({ code }: LatexHtmlPreviewProps) {
           // base.css (standard LaTeX.js formatting)
           const baseLink = doc.createElement("link");
           baseLink.rel = "stylesheet";
-          baseLink.href = "https://cdn.jsdelivr.net/npm/latex.js@0.12.6/dist/css/base.css";
+          baseLink.href = CDN_URLS.LATEX_BASE;
           baseLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/base.css';");
           head.appendChild(baseLink);
  
           // article.css (standard paper document class layout style)
           const articleLink = doc.createElement("link");
           articleLink.rel = "stylesheet";
-          articleLink.href = "https://cdn.jsdelivr.net/npm/latex.js@0.12.6/dist/css/article.css";
+          articleLink.href = CDN_URLS.LATEX_ARTICLE;
           articleLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/article.css';");
           head.appendChild(articleLink);
  
           // katex.css (LaTeX math rendering formulas)
           const katexLink = doc.createElement("link");
           katexLink.rel = "stylesheet";
-          katexLink.href = "https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css";
+          katexLink.href = CDN_URLS.KATEX;
           katexLink.setAttribute("onerror", "this.onerror=null;this.href='/css/latex/katex.css';");
           head.appendChild(katexLink);
 
