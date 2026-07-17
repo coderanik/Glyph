@@ -835,18 +835,19 @@ Start writing your LaTeX document here...
                       </td>
                       <td>
                         <div className="dash-td-actions">
-                          <button className="dash-icon-btn" aria-label="Copy">
+                          <button className="dash-icon-btn" aria-label="Copy" title="Copy project">
                             <IconCopy size={15} />
                           </button>
-                          <button className="dash-icon-btn" aria-label="Download">
+                          <button className="dash-icon-btn" aria-label="Download" title="Download project">
                             <IconDownload size={15} />
                           </button>
-                          <button className="dash-icon-btn" aria-label="Share">
+                          <button className="dash-icon-btn" aria-label="Share" title="Share project">
                             <IconShare size={15} />
                           </button>
                           <button
                             className="dash-icon-btn"
                             aria-label="Delete"
+                            title="Delete project"
                             onClick={(e) => handleDeleteOne(project.id, e)}
                           >
                             <IconTrashSmall size={15} />
