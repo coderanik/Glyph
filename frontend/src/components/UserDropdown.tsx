@@ -120,6 +120,7 @@ export default function UserDropdown() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center overflow-hidden text-[10px] font-bold text-zinc-600 dark:text-zinc-300 hover:ring-2 ring-zinc-300 dark:ring-zinc-700 transition-all focus:outline-none"
+        aria-label="Account menu"
         title="Account"
       >
         {user.imageUrl ? (

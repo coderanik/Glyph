@@ -38,6 +38,7 @@ export default function ActivityBar({
       <button
         onClick={onToggleSidebar}
         className="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors"
+        aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
         title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
       >
         <PanelLeft size={16} />
@@ -57,6 +58,7 @@ export default function ActivityBar({
                 ? "bg-accent-bg text-accent font-medium shadow-sm"
                 : "text-text-secondary hover:bg-bg-secondary hover:text-text-primary"
             }`}
+            aria-label={item.label}
             title={item.label}
           >
             <Icon size={16} />
@@ -69,6 +71,7 @@ export default function ActivityBar({
       <button
         onClick={() => router.push("/settings")}
         className="w-8 h-8 rounded-md flex items-center justify-center text-text-secondary hover:bg-bg-secondary hover:text-text-primary transition-colors cursor-pointer"
+        aria-label="Settings"
         title="Settings"
       >
         <Settings size={16} />
