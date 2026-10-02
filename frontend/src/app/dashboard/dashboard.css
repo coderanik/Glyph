@@ -1100,3 +1100,94 @@
   }
 }
 
+.dashboard .dash-confirm {
+  max-width: 400px;
+  gap: 18px;
+}
+
+.dashboard .dash-confirm .dash-modal-desc {
+  margin-top: 8px;
+}
+
+.dash-confirm-btn-danger {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+}
+
+.dash-confirm-btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.dash-confirm-btn-danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dash-toasts {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard .dash-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-secondary);
+  background: rgba(21, 23, 26, 0.94);
+  color: #f1f5f9;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  animation: toastIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard.light .dash-toast,
+.dashboard:not(.dark) .dash-toast {
+  background: rgba(255, 255, 255, 0.96);
+  color: #1e293b;
+}
+
+.dash-toast-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dash-toast-success .dash-toast-mark {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.dash-toast-error {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.dash-toast-error .dash-toast-mark {
+  background: rgba(248, 113, 113, 0.16);
+  color: #f87171;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

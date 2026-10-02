@@ -117,4 +117,28 @@ describe('Project Controller API Tests', () => {
     const json = await res.json()
     expect(json.name).toBe('test.tex')
   })
+
+  it('GET /projects/:projectId/pdf returns the latest successful PDF', async () => {
+    const pdf = Buffer.from('%PDF-1.4')
+    vi.mocked(query)
+      .mockResolvedValueOnce(mockQueryResult([{ owner_id: 'user_123' }]))
+      .mockResolvedValueOnce(mockQueryResult([{ pdf_data: pdf }]))
+
+    const res = await app.request('/projects/proj-1/pdf', {
+      headers: { Authorization: 'Bearer mock-token' },
+    })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('application/pdf')
+  })
+
+  it('GET /projects/:projectId/pdf is 404 when nothing has compiled', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce(mockQueryResult([{ owner_id: 'user_123' }]))
+      .mockResolvedValueOnce(mockQueryResult([]))
+
+    const res = await app.request('/projects/proj-1/pdf', {
+      headers: { Authorization: 'Bearer mock-token' },
+    })
+    expect(res.status).toBe(404)
+  })
 })

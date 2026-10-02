@@ -443,6 +443,40 @@ export async function getJobPdf(c: Context) {
   }
 }
 
+// GET /projects/:projectId/pdf — latest successful compile
+export async function getLatestProjectPdf(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const projectId = c.req.param('projectId');
+  if (!projectId) return c.json({ error: 'Project ID is required' }, 400);
+
+  const access = await checkProjectAccess(projectId, userId);
+  if (!access) return c.text('Forbidden', 403);
+
+  try {
+    const result = await query(
+      `SELECT pdf_data FROM compilation_jobs
+       WHERE project_id = $1 AND status = 'success' AND pdf_data IS NOT NULL
+       ORDER BY completed_at DESC NULLS LAST, started_at DESC
+       LIMIT 1`,
+      [projectId]
+    );
+
+    if (result.rows.length === 0 || !result.rows[0].pdf_data) {
+      return c.text('PDF not found', 404);
+    }
+
+    c.header('Content-Type', 'application/pdf');
+    c.header('Content-Disposition', 'inline; filename="document.pdf"');
+    return c.body(result.rows[0].pdf_data);
+  } catch (err) {
+    console.error('Error downloading latest PDF:', err);
+    return c.text('Internal Server Error', 500);
+  }
+}
+
 // POST /projects/:projectId/share
 export async function createShareLink(c: Context) {
   const auth = getAuth(c);

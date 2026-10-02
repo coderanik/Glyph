@@ -8,7 +8,7 @@ type StatusBarProps = {
   wordCount: number;
   hasErrors: boolean;
   errorCount: number;
-  autoSaveStatus?: "saved" | "saving" | "idle";
+  autoSaveStatus?: "saved" | "saving" | "idle" | "offline";
 };
 
 export default function StatusBar({
@@ -40,6 +40,11 @@ export default function StatusBar({
           <>
             <Save size={11} className="text-green-500" />
             <span className="text-green-600">Saved</span>
+          </>
+        ) : autoSaveStatus === "offline" ? (
+          <>
+            <Clock size={11} className="text-red-500" />
+            <span className="text-red-600">Not saved · offline</span>
           </>
         ) : (
           <>

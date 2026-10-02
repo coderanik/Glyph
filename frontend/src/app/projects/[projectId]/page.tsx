@@ -120,8 +120,12 @@ export default function ProjectEditorPage({
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Auto-save state
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "idle" | "offline">("idle");
   const lastSavedContent = useRef<string>("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hydratedFileRef = useRef<string | null>(null);
+  const connectedRef = useRef(false);
+  connectedRef.current = connected;
 
   const editorViewRef = useRef<EditorView | null>(null);
 
@@ -159,12 +163,16 @@ export default function ProjectEditorPage({
     }
   };
 
-  // Reset autoSaveStatus on fileId change
+  // Reset auto-save tracking when the open file changes
   useEffect(() => {
+    lastSavedContent.current = "";
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     const t = setTimeout(() => {
       setAutoSaveStatus("idle");
     }, 0);
-    lastSavedContent.current = "";
     return () => clearTimeout(t);
   }, [fileId]);
 
@@ -404,6 +412,33 @@ export default function ProjectEditorPage({
     setWordCount(words);
 
     scheduleAutoCompile();
+
+    if (userRole === "read" || !fileId) return;
+
+    // First callback after a file opens is the hydrated document, not an edit.
+    if (hydratedFileRef.current !== fileId) {
+      hydratedFileRef.current = fileId;
+      lastSavedContent.current = code;
+      return;
+    }
+
+    if (code === lastSavedContent.current) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    setAutoSaveStatus("saving");
+    const snapshot = code;
+    // Matches the server Yjs debounce (2.5s) so "Saved" means the room was persisted.
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      if (connectedRef.current) {
+        lastSavedContent.current = snapshot;
+        setAutoSaveStatus("saved");
+      } else {
+        setAutoSaveStatus("offline");
+      }
+    }, 2500);
   };
 
   const handleFileCreate = async () => {

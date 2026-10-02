@@ -73,6 +73,20 @@ describe('StatusBar Component', () => {
     expect(screen.getByText('Saved')).toBeDefined()
   })
 
+  it('renders offline auto-save state', () => {
+    render(
+      <StatusBar
+        connected={false}
+        onlineCount={0}
+        wordCount={10}
+        hasErrors={false}
+        errorCount={0}
+        autoSaveStatus="offline"
+      />
+    )
+    expect(screen.getByText('Not saved · offline')).toBeDefined()
+  })
+
   it('renders error counts when compilation has errors', () => {
     render(
       <StatusBar

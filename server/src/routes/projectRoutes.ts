@@ -9,6 +9,7 @@ import {
   compileProject,
   getJobStatus,
   getJobPdf,
+  getLatestProjectPdf,
   createShareLink,
   acceptShareLink,
   getProjectCollaborators,
@@ -27,6 +28,7 @@ projectRoutes.post('/:projectId/files', createFile);
 projectRoutes.post('/:projectId/compile', compileProject);
 projectRoutes.get('/:projectId/jobs/:jobId', getJobStatus);
 projectRoutes.get('/:projectId/jobs/:jobId/pdf', getJobPdf);
+projectRoutes.get('/:projectId/pdf', getLatestProjectPdf);
 projectRoutes.post('/:projectId/share', createShareLink);
 projectRoutes.get('/:projectId/collaborators', getProjectCollaborators);
 projectRoutes.post('/:projectId/ai', aiQuery);

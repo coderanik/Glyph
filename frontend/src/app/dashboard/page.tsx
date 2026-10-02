@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, type MouseEvent } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser, UserButton, useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
+import { APP_VERSION } from "@/lib/version";
+import ShareModal from "@/components/ShareModal";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import ToastStack, { type ToastItem } from "@/components/ToastStack";
 import "./dashboard.css";
 import { logError } from "@/lib/errorLogger";
 
@@ -237,6 +241,31 @@ export default function DashboardPage() {
   const [projectName, setProjectName] = useState("Untitled Project");
   const [projectTags, setProjectTags] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    tone: "danger" | "default";
+    run: () => Promise<void>;
+  } | null>(null);
+  const toastSeq = useRef(0);
+
+  const pushToast = useCallback((message: string, tone: ToastItem["tone"] = "success") => {
+    const id = ++toastSeq.current;
+    setToasts((prev) => [...prev, { id, message, tone }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 3400);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   // Theme + custom tags from localStorage (default: dark)
   useEffect(() => {
@@ -364,19 +393,10 @@ export default function DashboardPage() {
     setSelected(new Set());
   };
 
-  const runBulkAction = async (action: "archive" | "unarchive" | "delete" | "restore" | "permanentDelete") => {
-    const ids = Array.from(selected);
-    if (!ids.length) return;
-
-    const labels: Record<string, string> = {
-      archive: "archive",
-      unarchive: "unarchive",
-      delete: "move to trash",
-      restore: "restore",
-      permanentDelete: "permanently delete",
-    };
-    if (!confirm(`Are you sure you want to ${labels[action]} ${ids.length} project(s)?`)) return;
-
+  const executeBulkAction = async (
+    action: "archive" | "unarchive" | "delete" | "restore" | "permanentDelete",
+    ids: string[]
+  ) => {
     setBulkBusy(true);
     try {
       const token = await getToken();
@@ -395,18 +415,68 @@ export default function DashboardPage() {
       }
       clearSelection();
       await loadProjectsFromDb();
+      const count = ids.length;
+      const noun = count === 1 ? "project" : "projects";
+      const done: Record<typeof action, string> = {
+        archive: `${count} ${noun} archived`,
+        unarchive: `${count} ${noun} restored to your projects`,
+        delete: `${count} ${noun} moved to trash`,
+        restore: `${count} ${noun} restored`,
+        permanentDelete: `${count} ${noun} deleted`,
+      };
+      pushToast(done[action]);
     } catch (err) {
       logError("Bulk action failed:", err);
-      alert(err instanceof Error ? err.message : "Bulk action failed");
+      pushToast(err instanceof Error ? err.message : "Bulk action failed", "error");
     } finally {
       setBulkBusy(false);
     }
   };
 
-  const handleDeleteOne = async (id: string, e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm("Move this project to trash?")) return;
+  const runBulkAction = (action: "archive" | "unarchive" | "delete" | "restore" | "permanentDelete") => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    const count = ids.length;
+    const noun = count === 1 ? "project" : "projects";
+    const copy: Record<typeof action, { title: string; message: string; confirmLabel: string; tone: "danger" | "default" }> = {
+      archive: {
+        title: "Archive projects?",
+        message: `${count} ${noun} will be moved to Archived.`,
+        confirmLabel: "Archive",
+        tone: "default",
+      },
+      unarchive: {
+        title: "Unarchive projects?",
+        message: `${count} ${noun} will return to your project list.`,
+        confirmLabel: "Unarchive",
+        tone: "default",
+      },
+      delete: {
+        title: "Move to trash?",
+        message: `${count} ${noun} will be moved to trash. You can restore them later.`,
+        confirmLabel: "Move to trash",
+        tone: "danger",
+      },
+      restore: {
+        title: "Restore projects?",
+        message: `${count} ${noun} will be restored from trash.`,
+        confirmLabel: "Restore",
+        tone: "default",
+      },
+      permanentDelete: {
+        title: "Delete forever?",
+        message: `${count} ${noun} will be permanently deleted. This cannot be undone.`,
+        confirmLabel: "Delete forever",
+        tone: "danger",
+      },
+    };
+    setConfirmRequest({
+      ...copy[action],
+      run: () => executeBulkAction(action, ids),
+    });
+  };
+
+  const deleteProject = async (id: string, name: string) => {
     try {
       const token = await getToken();
       if (!token) return;
@@ -421,10 +491,89 @@ export default function DashboardPage() {
         return next;
       });
       await loadProjectsFromDb();
+      pushToast(`${name} has been moved to trash`);
     } catch (err) {
       logError("Delete failed:", err);
-      alert("Failed to delete project");
+      pushToast("Failed to move project to trash", "error");
     }
+  };
+
+  const handleDeleteOne = (id: string, name: string, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConfirmRequest({
+      title: "Move to trash?",
+      message: `"${name}" will be moved to trash. You can restore it later.`,
+      confirmLabel: "Move to trash",
+      tone: "danger",
+      run: () => deleteProject(id, name),
+    });
+  };
+
+  const submitConfirm = async () => {
+    if (!confirmRequest || confirmBusy) return;
+    setConfirmBusy(true);
+    try {
+      await confirmRequest.run();
+    } finally {
+      setConfirmBusy(false);
+      setConfirmRequest(null);
+    }
+  };
+
+  const handleCopyLink = async (id: string, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/projects/${id}`);
+      setCopiedId(id);
+      pushToast("Project link copied");
+      window.setTimeout(() => {
+        setCopiedId((current) => (current === id ? null : current));
+      }, 2000);
+    } catch (err) {
+      logError("Copy failed:", err);
+      pushToast("Failed to copy project link", "error");
+    }
+  };
+
+  const handleDownloadPdf = async (project: ProjectData, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDownloadingId(project.id);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(apiUrl(`/projects/${project.id}/pdf`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 404) {
+        pushToast("Compile this project first to download a PDF.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${project.name || "document"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      pushToast("PDF downloaded");
+    } catch (err) {
+      logError("Download failed:", err);
+      pushToast("Failed to download PDF", "error");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleShareOne = (id: string, e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShareProjectId(id);
   };
 
   const handleNewTag = () => {
@@ -497,7 +646,7 @@ Start writing your LaTeX document here...
       router.push(`/projects/${project.id}`);
     } catch (err) {
       logError("Failed to create project:", err);
-      alert("Failed to create project. Please try again.");
+      pushToast("Failed to create project. Please try again.", "error");
     } finally {
       setIsCreating(false);
       setIsModalOpen(false);
@@ -588,7 +737,7 @@ Start writing your LaTeX document here...
           </Link>
           <div className="flex items-center justify-between text-[10px] font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider">
             <span>Version</span>
-            <span>v0.1.0</span>
+            <span>v{APP_VERSION}</span>
           </div>
         </div>
       </aside>
@@ -835,20 +984,39 @@ Start writing your LaTeX document here...
                       </td>
                       <td>
                         <div className="dash-td-actions">
-                          <button className="dash-icon-btn" aria-label="Copy" title="Copy project">
+                          <button
+                            type="button"
+                            className="dash-icon-btn"
+                            aria-label="Copy"
+                            title={copiedId === project.id ? "Copied link" : "Copy project link"}
+                            onClick={(e) => handleCopyLink(project.id, e)}
+                          >
                             <IconCopy size={15} />
                           </button>
-                          <button className="dash-icon-btn" aria-label="Download" title="Download project">
+                          <button
+                            type="button"
+                            className="dash-icon-btn"
+                            aria-label="Download"
+                            title={downloadingId === project.id ? "Downloading…" : "Download latest PDF"}
+                            disabled={downloadingId === project.id}
+                            onClick={(e) => handleDownloadPdf(project, e)}
+                          >
                             <IconDownload size={15} />
                           </button>
-                          <button className="dash-icon-btn" aria-label="Share" title="Share project">
+                          <button
+                            type="button"
+                            className="dash-icon-btn"
+                            aria-label="Share"
+                            title="Share project"
+                            onClick={(e) => handleShareOne(project.id, e)}
+                          >
                             <IconShare size={15} />
                           </button>
                           <button
                             className="dash-icon-btn"
                             aria-label="Delete"
                             title="Delete project"
-                            onClick={(e) => handleDeleteOne(project.id, e)}
+                            onClick={(e) => handleDeleteOne(project.id, project.name, e)}
                           >
                             <IconTrashSmall size={15} />
                           </button>
@@ -995,6 +1163,23 @@ Start writing your LaTeX document here...
           </div>
         </div>
       )}
+      <ShareModal
+        isOpen={shareProjectId !== null}
+        onClose={() => setShareProjectId(null)}
+        projectId={shareProjectId ?? ""}
+        getToken={getToken}
+      />
+      <ConfirmDialog
+        open={confirmRequest !== null}
+        title={confirmRequest?.title ?? ""}
+        message={confirmRequest?.message ?? ""}
+        confirmLabel={confirmRequest?.confirmLabel ?? "Confirm"}
+        tone={confirmRequest?.tone ?? "default"}
+        busy={confirmBusy}
+        onConfirm={submitConfirm}
+        onCancel={() => { if (!confirmBusy) setConfirmRequest(null); }}
+      />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

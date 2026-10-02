@@ -121,7 +121,13 @@ export default function Editor({
         onConnectionStatusChangeRef.current(status === "connected");
       }
     };
+    const onConnectionError = () => {
+      if (onConnectionStatusChangeRef.current) {
+        onConnectionStatusChangeRef.current(false);
+      }
+    };
     provider.on("status", onStatusChange);
+    provider.on("connection-error", onConnectionError);
 
     provider.on("sync", (isSynced: boolean) => {
       if (isSynced && !cancelled) {
@@ -152,6 +158,7 @@ export default function Editor({
       window.clearTimeout(connectId);
       ytext.unobserve(onYjsChange);
       provider.off("status", onStatusChange);
+      provider.off("connection-error", onConnectionError);
       view.destroy();
       if (editorViewRef) {
         editorViewRef.current = null;

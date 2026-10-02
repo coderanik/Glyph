@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-10-03
+
+### Fixed
+- Dashboard Copy, Download, and Share actions now do something: copy the project link, download the latest compiled PDF, and open the share dialog.
+- The editor status bar follows real save state. Edits show Saving, then Saved after the collaborative document is persisted. If the socket is down, it shows that the change was not saved.
+- A dropped WebSocket marks the editor as disconnected.
+- Trash, archive, and delete ask for confirmation inside the app, then report the result in a toast.
+
 ## [1.0.0] - 2026-06-10
 
 ## What's New

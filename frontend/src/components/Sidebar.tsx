@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
+import { APP_VERSION } from "@/lib/version";
 import { logError } from "@/lib/errorLogger";
  
 // --- OUTLINE PARSING HELPER FOR EDITOR MODE ---
@@ -398,7 +399,7 @@ export default function Sidebar({
  
       <div className="p-4 border-t border-border-secondary flex items-center justify-between text-[10px] font-medium text-text-tertiary uppercase tracking-widest">
         <span>Version</span>
-        <span className="text-text-tertiary">v0.1.0</span>
+        <span className="text-text-tertiary">v{APP_VERSION}</span>
       </div>
     </aside>
   );
