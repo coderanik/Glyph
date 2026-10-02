@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, Compartment } from "@codemirror/state";
-import { keymap } from "@codemirror/view";
+import { keymap, Decoration } from "@codemirror/view";
 import { openSearchPanel } from "@codemirror/search";
 import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
@@ -18,6 +18,7 @@ export default function Editor({
   editorViewRef,
   onConnectionStatusChange,
   revealRange,
+  highlightRanges,
 }: {
   fileId: string;
   initialContent?: string;
@@ -26,6 +27,7 @@ export default function Editor({
   editorViewRef?: React.RefObject<EditorView | null>;
   onConnectionStatusChange?: (connected: boolean) => void;
   revealRange?: { token: number; from: number; to: number } | null;
+  highlightRanges?: { token: number; ranges: { from: number; to: number }[] } | null;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -35,6 +37,9 @@ export default function Editor({
   // Seed only — do not put live document text in the effect deps (that remounts on every keystroke).
   const initialContentRef = useRef(initialContent);
   const revealRangeRef = useRef(revealRange);
+  const highlightRef = useRef(highlightRanges);
+  const highlightCompartmentRef = useRef<Compartment | null>(null);
+  const appliedHighlightToken = useRef<number | null>(null);
   const syncedRef = useRef(false);
   const appliedRevealToken = useRef<number | null>(null);
 
@@ -52,6 +57,34 @@ export default function Editor({
     });
     view.focus();
     appliedRevealToken.current = range.token;
+  };
+
+  const applyHighlight = () => {
+    const view = viewRef.current;
+    const compartment = highlightCompartmentRef.current;
+    const spec = highlightRef.current;
+    if (!view || !compartment || !syncedRef.current) return;
+    const token = spec?.token ?? 0;
+    const ranges = spec?.ranges ?? [];
+    if (appliedHighlightToken.current === token) return;
+
+    const lineStarts = new Set<number>();
+    for (const range of ranges) {
+      const pos = Math.max(0, Math.min(range.from, view.state.doc.length));
+      lineStarts.add(view.state.doc.lineAt(pos).from);
+    }
+    const decorations = [...lineStarts]
+      .sort((a, b) => a - b)
+      .map((from) => Decoration.line({ class: "cm-history-line" }).range(from));
+    const extension = decorations.length
+      ? EditorView.decorations.of(Decoration.set(decorations))
+      : [];
+    const effects = [compartment.reconfigure(extension)];
+    if (ranges.length > 0) {
+      effects.push(EditorView.scrollIntoView(Math.min(ranges[0].from, view.state.doc.length), { y: "center" }));
+    }
+    view.dispatch({ effects });
+    appliedHighlightToken.current = token;
   };
 
   useEffect(() => {
@@ -101,11 +134,14 @@ export default function Editor({
     ytext.observe(onYjsChange);
 
     const collabCompartment = new Compartment();
+    const highlightCompartment = new Compartment();
+    highlightCompartmentRef.current = highlightCompartment;
 
     // Basic Editor View Setup
     const extensions = [
       basicSetup,
       collabCompartment.of([]), // Start without collaboration extension until synced
+      highlightCompartment.of([]),
       keymap.of([
         {
           key: "Alt-f",
@@ -168,6 +204,7 @@ export default function Editor({
         });
         syncedRef.current = true;
         applyReveal();
+        applyHighlight();
       }
     });
 
@@ -197,6 +234,11 @@ export default function Editor({
     revealRangeRef.current = revealRange;
     applyReveal();
   }, [revealRange]);
+
+  useEffect(() => {
+    highlightRef.current = highlightRanges;
+    applyHighlight();
+  }, [highlightRanges]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }

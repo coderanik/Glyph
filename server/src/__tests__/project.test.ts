@@ -103,7 +103,10 @@ describe('Project Controller API Tests', () => {
   it('POST /projects/:projectId/files should create a file if owner', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce(mockQueryResult([{ owner_id: 'user_123' }])) // checkProjectAccess
+      .mockResolvedValueOnce(mockQueryResult([])) // previous content
       .mockResolvedValueOnce(mockQueryResult([{ id: 'file-2', name: 'test.tex', path: 'test.tex', content: 'content' }])) // insert file
+      .mockResolvedValueOnce(mockQueryResult([])) // revision insert
+      .mockResolvedValueOnce(mockQueryResult([])) // trim old revisions
 
     const res = await app.request('/projects/proj-1/files', {
       method: 'POST',
@@ -140,5 +143,23 @@ describe('Project Controller API Tests', () => {
       headers: { Authorization: 'Bearer mock-token' },
     })
     expect(res.status).toBe(404)
+  })
+
+  it('GET /projects/:projectId/files/:fileId/revisions lists saved changes', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce(mockQueryResult([{ owner_id: 'user_123' }]))
+      .mockResolvedValueOnce(mockQueryResult([{
+        id: 'rev-1',
+        createdAt: '2026-10-03T03:08:00.000Z',
+        summary: '\\section{Intro}',
+        fileName: 'main.tex',
+      }]))
+
+    const res = await app.request('/projects/proj-1/files/file-1/revisions', {
+      headers: { Authorization: 'Bearer mock-token' },
+    })
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json[0].summary).toBe('\\section{Intro}')
   })
 })

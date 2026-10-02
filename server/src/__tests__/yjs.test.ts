@@ -80,6 +80,7 @@ describe('Yjs Collaborative Socket Server Tests', () => {
   it('should save the room state to database when last client disconnects', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce(mockQueryResult([{ id: 'room-2', content: '', yjs_state: null }])) // load
+      .mockResolvedValueOnce(mockQueryResult([{ content: '' }])) // previous content
       .mockResolvedValueOnce(mockQueryResult([])) // save on disconnect
 
     const ws = new MockWebSocket()
@@ -94,8 +95,8 @@ describe('Yjs Collaborative Socket Server Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 15))
 
     // Should have called update query to save Yjs state
-    expect(vi.mocked(query)).toHaveBeenCalledTimes(2)
-    const secondCall = vi.mocked(query).mock.calls[1]
-    expect(secondCall[0]).toContain('UPDATE files SET yjs_state = $1, content = $2')
+    expect(vi.mocked(query)).toHaveBeenCalledTimes(3)
+    const saveCall = vi.mocked(query).mock.calls[2]
+    expect(saveCall[0]).toContain('UPDATE files SET yjs_state = $1, content = $2')
   })
 })

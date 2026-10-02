@@ -85,6 +85,21 @@ export async function initializeDatabase() {
     // Ensure yjs_state column exists for persistence
     await client.query('ALTER TABLE files ADD COLUMN IF NOT EXISTS yjs_state BYTEA');
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS file_revisions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+        previous_content TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS file_revisions_file_created_idx
+      ON file_revisions (file_id, created_at DESC)
+    `);
+
     // 3. Compilation Jobs Table
     // Added pdf_data BYTEA to store the compiled PDF directly in the database
     await client.query(`

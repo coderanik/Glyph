@@ -410,6 +410,10 @@
   z-index: 1;
 }
 
+.editor-workspace .cm-history-line {
+  background-color: rgba(16, 185, 129, 0.28);
+}
+
 .editor-loading-text {
   font-family: var(--font-mono);
   font-size: 12px;

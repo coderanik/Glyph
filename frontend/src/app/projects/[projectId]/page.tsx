@@ -133,6 +133,18 @@ export default function ProjectEditorPage({
   const editorViewRef = useRef<EditorView | null>(null);
   const revealSeq = useRef(0);
   const [reveal, setReveal] = useState<{ token: number; fileId: string; from: number; to: number } | null>(null);
+  const [highlight, setHighlight] = useState<{ token: number; fileId: string; ranges: { from: number; to: number }[] } | null>(null);
+  if (highlight && highlight.fileId !== fileId) {
+    setHighlight(null);
+  }
+
+  const handleHistoryHighlight = (targetFileId: string, ranges: { from: number; to: number }[]) => {
+    setHighlight({
+      token: ++revealSeq.current,
+      fileId: targetFileId,
+      ranges,
+    });
+  };
 
   const handleSearchJump = (targetFileId: string, from: number, to: number) => {
     setFileId(targetFileId);
@@ -586,6 +598,7 @@ export default function ProjectEditorPage({
           onGetEditorContext={getEditorContext}
           onReplaceDocument={handleReplaceDocument}
           onSearchJump={handleSearchJump}
+          onHistoryHighlight={handleHistoryHighlight}
           projectId={projectId}
         />
 
@@ -606,6 +619,11 @@ export default function ProjectEditorPage({
                   revealRange={
                     reveal && reveal.fileId === fileId
                       ? { token: reveal.token, from: reveal.from, to: reveal.to }
+                      : null
+                  }
+                  highlightRanges={
+                    highlight && highlight.fileId === fileId
+                      ? { token: highlight.token, ranges: highlight.ranges }
                       : null
                   }
                 />

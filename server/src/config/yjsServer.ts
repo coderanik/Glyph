@@ -4,6 +4,7 @@ import * as sync from 'y-protocols/sync';
 import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
 import { query } from './db.js';
+import { recordFileRevision } from './revisions.js';
 
 // Map of roomName -> Y.Doc
 const docs = new Map<string, Y.Doc>();
@@ -21,6 +22,11 @@ async function saveDocToDb(roomName: string, doc: Y.Doc) {
   try {
     const update = Y.encodeStateAsUpdate(doc);
     const text = doc.getText('codemirror').toString();
+    const prevRes = await query('SELECT content FROM files WHERE id = $1', [roomName]);
+    const previous = prevRes.rows[0]?.content ?? '';
+    if (previous !== text) {
+      await recordFileRevision(roomName, previous, text);
+    }
     await query(
       'UPDATE files SET yjs_state = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
       [Buffer.from(update), text, roomName]

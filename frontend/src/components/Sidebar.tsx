@@ -21,6 +21,7 @@ import { apiUrl } from "@/lib/api";
 import { APP_VERSION } from "@/lib/version";
 import { logError } from "@/lib/errorLogger";
 import { findTextMatches } from "@/lib/searchFiles";
+import HistoryPanel from "@/components/HistoryPanel";
  
 // --- OUTLINE PARSING HELPER FOR EDITOR MODE ---
 function parseOutline(content: string) {
@@ -109,6 +110,7 @@ type SidebarProps = {
   onGetEditorContext?: () => { fileContent: string; selectedText: string };
   onReplaceDocument?: (text: string) => void;
   onSearchJump?: (fileId: string, from: number, to: number) => void;
+  onHistoryHighlight?: (fileId: string, ranges: { from: number; to: number }[]) => void;
   projectId?: string;
 };
  
@@ -129,6 +131,7 @@ export default function Sidebar({
   onGetEditorContext,
   onReplaceDocument,
   onSearchJump,
+  onHistoryHighlight,
   projectId = "",
 }: SidebarProps) {
   const { getToken } = useAuth();
@@ -178,7 +181,7 @@ export default function Sidebar({
     const dynamicOutline = parseOutline(activeFile?.content || "");
  
     return (
-      <aside className="w-[200px] shrink-0 bg-bg-secondary border-r border-border-secondary flex flex-col overflow-hidden transition-all duration-200 text-text-primary select-none">
+      <aside className={`${activeActivityItem === 3 ? "w-[440px]" : "w-[200px]"} shrink-0 bg-bg-secondary border-r border-border-secondary flex flex-col overflow-hidden transition-all duration-200 text-text-primary select-none`}>
         {activeActivityItem === 2 ? (
           /* Dedicated Collaborators Panel */
           <div className="flex-1 flex flex-col min-h-0 py-2">
@@ -228,15 +231,14 @@ export default function Sidebar({
             onJump={onSearchJump}
           />
         ) : activeActivityItem === 3 ? (
-          /* Dedicated History Panel */
-          <div className="flex-1 flex flex-col py-2">
-            <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-text-tertiary border-b border-border-secondary mb-2 pb-2">
-              History
-            </div>
-            <div className="px-3 text-xs text-text-tertiary italic">
-              No revision history available.
-            </div>
-          </div>
+          <HistoryPanel
+            projectId={projectId}
+            fileId={activeFileId}
+            liveContent={onGetEditorContext?.().fileContent}
+            onHighlight={(ranges) => {
+              if (activeFileId) onHistoryHighlight?.(activeFileId, ranges);
+            }}
+          />
         ) : activeActivityItem === 4 ? (
           /* Dedicated AI Assistant Panel */
           <SidebarAiPanel

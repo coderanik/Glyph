@@ -6,6 +6,8 @@ import {
   deleteProject,
   getFiles,
   createFile,
+  listFileRevisions,
+  getFileRevision,
   compileProject,
   getJobStatus,
   getJobPdf,
@@ -25,6 +27,8 @@ projectRoutes.post('/share/accept', acceptShareLink); // Accept link is mounted 
 projectRoutes.delete('/:projectId', deleteProject);
 projectRoutes.get('/:projectId/files', getFiles);
 projectRoutes.post('/:projectId/files', createFile);
+projectRoutes.get('/:projectId/files/:fileId/revisions', listFileRevisions);
+projectRoutes.get('/:projectId/files/:fileId/revisions/:revisionId', getFileRevision);
 projectRoutes.post('/:projectId/compile', compileProject);
 projectRoutes.get('/:projectId/jobs/:jobId', getJobStatus);
 projectRoutes.get('/:projectId/jobs/:jobId/pdf', getJobPdf);

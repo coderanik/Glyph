@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { getAuth } from '@hono/clerk-auth';
 import { query } from '../config/db.js';
+import { recordFileRevision } from '../config/revisions.js';
 import crypto from 'crypto';
 import { forceSaveRoom } from '../config/yjsServer.js';
 import path from 'path';
@@ -325,6 +326,12 @@ export async function createFile(c: Context) {
       return c.json({ error: 'Forbidden: Invalid or traversal file path' }, 400);
     }
 
+    const existing = await query(
+      'SELECT content FROM files WHERE project_id = $1 AND path = $2',
+      [projectId, filePath]
+    );
+    const previous = existing.rows[0]?.content ?? '';
+
     // Upsert the file content
     const result = await query(
       `INSERT INTO files (project_id, name, path, content, updated_at)
@@ -335,10 +342,77 @@ export async function createFile(c: Context) {
       [projectId, name, filePath, content]
     );
 
+    if (previous !== content) {
+      await recordFileRevision(result.rows[0].id, previous, content);
+    }
+
     return c.json(result.rows[0]);
   } catch (err) {
     console.error('Error saving file:', err);
     return c.json({ error: 'Database error', details: err instanceof Error ? err.message : String(err) }, 500);
+  }
+}
+
+// GET /projects/:projectId/files/:fileId/revisions
+export async function listFileRevisions(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const fileId = c.req.param('fileId');
+  if (!projectId || !fileId) return c.json({ error: 'Project and file are required' }, 400);
+
+  const access = await checkProjectAccess(projectId, userId);
+  if (!access) return c.json({ error: 'Forbidden' }, 403);
+
+  try {
+    const result = await query(
+      `SELECT r.id, r.created_at AS "createdAt", r.summary, f.name AS "fileName"
+       FROM file_revisions r
+       JOIN files f ON f.id = r.file_id
+       WHERE r.file_id = $1 AND f.project_id = $2
+       ORDER BY r.created_at DESC
+       LIMIT 40`,
+      [fileId, projectId]
+    );
+    return c.json(result.rows);
+  } catch (err) {
+    console.error('Error listing revisions:', err);
+    return c.json({ error: 'Database error' }, 500);
+  }
+}
+
+// GET /projects/:projectId/files/:fileId/revisions/:revisionId
+export async function getFileRevision(c: Context) {
+  const auth = getAuth(c);
+  const userId = auth?.userId;
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401);
+
+  const projectId = c.req.param('projectId');
+  const fileId = c.req.param('fileId');
+  const revisionId = c.req.param('revisionId');
+  if (!projectId || !fileId || !revisionId) {
+    return c.json({ error: 'Project, file, and revision are required' }, 400);
+  }
+
+  const access = await checkProjectAccess(projectId, userId);
+  if (!access) return c.json({ error: 'Forbidden' }, 403);
+
+  try {
+    const result = await query(
+      `SELECT r.id, r.created_at AS "createdAt", r.summary,
+              r.previous_content AS "previousContent", r.content, f.name AS "fileName"
+       FROM file_revisions r
+       JOIN files f ON f.id = r.file_id
+       WHERE r.id = $1 AND r.file_id = $2 AND f.project_id = $3`,
+      [revisionId, fileId, projectId]
+    );
+    if (result.rows.length === 0) return c.json({ error: 'Revision not found' }, 404);
+    return c.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching revision:', err);
+    return c.json({ error: 'Database error' }, 500);
   }
 }
 
