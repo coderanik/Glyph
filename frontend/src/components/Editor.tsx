@@ -17,6 +17,7 @@ export default function Editor({
   readOnly = false,
   editorViewRef,
   onConnectionStatusChange,
+  revealRange,
 }: {
   fileId: string;
   initialContent?: string;
@@ -24,6 +25,7 @@ export default function Editor({
   readOnly?: boolean;
   editorViewRef?: React.RefObject<EditorView | null>;
   onConnectionStatusChange?: (connected: boolean) => void;
+  revealRange?: { token: number; from: number; to: number } | null;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -32,6 +34,25 @@ export default function Editor({
   const onConnectionStatusChangeRef = useRef(onConnectionStatusChange);
   // Seed only — do not put live document text in the effect deps (that remounts on every keystroke).
   const initialContentRef = useRef(initialContent);
+  const revealRangeRef = useRef(revealRange);
+  const syncedRef = useRef(false);
+  const appliedRevealToken = useRef<number | null>(null);
+
+  const applyReveal = () => {
+    const range = revealRangeRef.current;
+    const view = viewRef.current;
+    if (!view || !range || !syncedRef.current) return;
+    if (appliedRevealToken.current === range.token) return;
+    const docLen = view.state.doc.length;
+    const from = Math.max(0, Math.min(range.from, docLen));
+    const to = Math.max(from, Math.min(range.to, docLen));
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      scrollIntoView: true,
+    });
+    view.focus();
+    appliedRevealToken.current = range.token;
+  };
 
   useEffect(() => {
     initialContentRef.current = initialContent;
@@ -49,6 +70,7 @@ export default function Editor({
     if (!editorRef.current) return;
 
     let cancelled = false;
+    syncedRef.current = false;
     const seedContent = initialContentRef.current || "";
 
     // Basic Yjs document and awareness
@@ -144,6 +166,8 @@ export default function Editor({
         view.dispatch({
           effects: collabCompartment.reconfigure(yCollab(ytext, provider.awareness)),
         });
+        syncedRef.current = true;
+        applyReveal();
       }
     });
 
@@ -155,6 +179,7 @@ export default function Editor({
 
     return () => {
       cancelled = true;
+      syncedRef.current = false;
       window.clearTimeout(connectId);
       ytext.unobserve(onYjsChange);
       provider.off("status", onStatusChange);
@@ -167,6 +192,11 @@ export default function Editor({
     };
     // Only remount when switching files or read-only mode — never on content edits
   }, [fileId, readOnly, editorViewRef]);
+
+  useEffect(() => {
+    revealRangeRef.current = revealRange;
+    applyReveal();
+  }, [revealRange]);
 
   return <div ref={editorRef} className="h-full w-full text-base [&>.cm-editor]:h-full [&_.cm-scroller]:overflow-auto"></div>;
 }

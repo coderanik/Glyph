@@ -1,6 +1,6 @@
 "use client";
  
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, type RefObject } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,11 +14,13 @@ import {
   Send,
   Copy,
   Check,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { apiUrl } from "@/lib/api";
 import { APP_VERSION } from "@/lib/version";
 import { logError } from "@/lib/errorLogger";
+import { findTextMatches } from "@/lib/searchFiles";
  
 // --- OUTLINE PARSING HELPER FOR EDITOR MODE ---
 function parseOutline(content: string) {
@@ -106,6 +108,7 @@ type SidebarProps = {
   onInsertText?: (text: string) => void;
   onGetEditorContext?: () => { fileContent: string; selectedText: string };
   onReplaceDocument?: (text: string) => void;
+  onSearchJump?: (fileId: string, from: number, to: number) => void;
   projectId?: string;
 };
  
@@ -125,12 +128,20 @@ export default function Sidebar({
   onInsertText,
   onGetEditorContext,
   onReplaceDocument,
+  onSearchJump,
   projectId = "",
 }: SidebarProps) {
   const { getToken } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [foldersExpanded, setFoldersExpanded] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditor || !isOpen || activeActivityItem !== 1) return;
+    searchInputRef.current?.focus();
+  }, [isEditor, isOpen, activeActivityItem]);
  
   // Load projects list internally ONLY in non-editor mode (dashboard/profile/settings navigation)
   useEffect(() => {
@@ -207,15 +218,15 @@ export default function Sidebar({
             </div>
           </div>
         ) : activeActivityItem === 1 ? (
-          /* Dedicated Search Panel */
-          <div className="flex-1 flex flex-col py-2">
-            <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-text-tertiary border-b border-border-secondary mb-2 pb-2">
-              Search
-            </div>
-            <div className="px-3 text-xs text-text-secondary">
-              Use Alt+F (Option+F) to search across the editor.
-            </div>
-          </div>
+          <SidebarSearchPanel
+            files={files}
+            activeFileId={activeFileId}
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            inputRef={searchInputRef}
+            liveContent={onGetEditorContext?.().fileContent}
+            onJump={onSearchJump}
+          />
         ) : activeActivityItem === 3 ? (
           /* Dedicated History Panel */
           <div className="flex-1 flex flex-col py-2">
@@ -614,6 +625,101 @@ function SidebarAiPanel({
         >
           <Send size={13} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+function SidebarSearchPanel({
+  files,
+  activeFileId,
+  query,
+  onQueryChange,
+  inputRef,
+  liveContent,
+  onJump,
+}: {
+  files: { id: string; name: string; content?: string }[];
+  activeFileId: string | null;
+  query: string;
+  onQueryChange: (value: string) => void;
+  inputRef: RefObject<HTMLInputElement | null>;
+  liveContent?: string;
+  onJump?: (fileId: string, from: number, to: number) => void;
+}) {
+  const matches = useMemo(() => {
+    const searchable = files.map((file) =>
+      file.id === activeFileId && liveContent
+        ? { ...file, content: liveContent }
+        : file
+    );
+    return findTextMatches(searchable, query);
+  }, [files, activeFileId, liveContent, query]);
+
+  const groups = useMemo(() => {
+    const byFile: { fileId: string; fileName: string; hits: typeof matches }[] = [];
+    for (const hit of matches) {
+      const last = byFile[byFile.length - 1];
+      if (last && last.fileId === hit.fileId) {
+        last.hits.push(hit);
+      } else {
+        byFile.push({ fileId: hit.fileId, fileName: hit.fileName, hits: [hit] });
+      }
+    }
+    return byFile;
+  }, [matches]);
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 py-2">
+      <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider uppercase text-text-tertiary border-b border-border-secondary mb-2 pb-2 shrink-0">
+        Search
+      </div>
+      <div className="px-3 shrink-0">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-bg-primary border border-border-secondary focus-within:border-accent">
+          <Search size={12} className="text-text-tertiary shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search files"
+            aria-label="Search files"
+            className="w-full bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
+          />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto mt-2 min-h-0">
+        {!query.trim() ? (
+          <p className="px-3 text-[11px] text-text-tertiary leading-relaxed">
+            Search across project files. Alt+F still opens search in the editor.
+          </p>
+        ) : matches.length === 0 ? (
+          <p className="px-3 text-[11px] text-text-tertiary">No matches.</p>
+        ) : (
+          groups.map((group) => (
+            <div key={group.fileId} className="mb-1">
+              <div className="px-3 py-1 text-[10px] font-medium text-text-secondary truncate">
+                {group.fileName}
+                <span className="text-text-tertiary"> · {group.hits.length}</span>
+              </div>
+              {group.hits.map((hit) => (
+                <button
+                  key={`${hit.fileId}-${hit.from}`}
+                  type="button"
+                  onClick={() => onJump?.(hit.fileId, hit.from, hit.to)}
+                  className="w-full text-left px-3 py-1 hover:bg-bg-primary transition-colors cursor-pointer"
+                >
+                  <span className="block truncate text-[11px] text-text-secondary">
+                  <span className="text-[10px] text-text-tertiary mr-1.5">{hit.line}</span>
+                    {hit.before}
+                    <span className="text-accent font-medium">{hit.match}</span>
+                    {hit.after}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

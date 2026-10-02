@@ -125,9 +125,24 @@ export default function ProjectEditorPage({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedFileRef = useRef<string | null>(null);
   const connectedRef = useRef(false);
-  connectedRef.current = connected;
+
+  useEffect(() => {
+    connectedRef.current = connected;
+  }, [connected]);
 
   const editorViewRef = useRef<EditorView | null>(null);
+  const revealSeq = useRef(0);
+  const [reveal, setReveal] = useState<{ token: number; fileId: string; from: number; to: number } | null>(null);
+
+  const handleSearchJump = (targetFileId: string, from: number, to: number) => {
+    setFileId(targetFileId);
+    setReveal({
+      token: ++revealSeq.current,
+      fileId: targetFileId,
+      from,
+      to,
+    });
+  };
 
   const handleInsertText = (text: string) => {
     const view = editorViewRef.current;
@@ -570,6 +585,7 @@ export default function ProjectEditorPage({
           onInsertText={handleInsertText}
           onGetEditorContext={getEditorContext}
           onReplaceDocument={handleReplaceDocument}
+          onSearchJump={handleSearchJump}
           projectId={projectId}
         />
 
@@ -587,6 +603,11 @@ export default function ProjectEditorPage({
                   readOnly={userRole === "read"}
                   editorViewRef={editorViewRef}
                   onConnectionStatusChange={setConnected}
+                  revealRange={
+                    reveal && reveal.fileId === fileId
+                      ? { token: reveal.token, from: reveal.from, to: reveal.to }
+                      : null
+                  }
                 />
               )}
             </div>
